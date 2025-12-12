@@ -1,28 +1,16 @@
-import React, { useState } from 'react';
-import { CalendarEvent, LegendItem, ClassLog, ScheduleSlot, Course } from '../types';
-import { Download, Plus, Trash2, X, Settings, Check, CheckSquare, Square, Lock, Unlock, Eye, AlertCircle, NotebookPen, Calendar } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { CalendarEvent, LegendItem, ClassLog, ScheduleSlot, Course, SchoolInfo } from '../types';
+import { Download, Plus, Trash2, X, Settings, CheckSquare, Square, Lock, Unlock, Eye, AlertCircle, NotebookPen, Calendar } from 'lucide-react';
 import { INITIAL_LEGEND_ITEMS, CALENDAR_EVENTS } from '../constants';
 
 interface CalendarViewProps {
-  events: CalendarEvent[]; // kept for prop compatibility
+  events: CalendarEvent[];
   logs: ClassLog[];
   schedule: ScheduleSlot[];
   courses: Course[];
+  schoolInfo: SchoolInfo; // Added prop for dynamic year calculation
   onNavigateToJournal: (date: string) => void;
 }
-
-const MONTHS_ORDER = [
-  { name: 'Septiembre', year: 2025, monthIdx: 8 },
-  { name: 'Octubre', year: 2025, monthIdx: 9 },
-  { name: 'Noviembre', year: 2025, monthIdx: 10 },
-  { name: 'Diciembre', year: 2025, monthIdx: 11 },
-  { name: 'Enero', year: 2026, monthIdx: 0 },
-  { name: 'Febrero', year: 2026, monthIdx: 1 },
-  { name: 'Marzo', year: 2026, monthIdx: 2 },
-  { name: 'Abril', year: 2026, monthIdx: 3 },
-  { name: 'Mayo', year: 2026, monthIdx: 4 },
-  { name: 'Junio', year: 2026, monthIdx: 5 },
-];
 
 const PRESET_COLORS = [
   '#DC2626', // Red
@@ -40,7 +28,7 @@ const PRESET_COLORS = [
   '#1E293B', // Dark Slate
 ];
 
-const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs, schedule, courses, onNavigateToJournal }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs, schedule, courses, schoolInfo, onNavigateToJournal }) => {
   // State
   const [legendItems, setLegendItems] = useState<LegendItem[]>(INITIAL_LEGEND_ITEMS);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(initialEvents || CALENDAR_EVENTS);
@@ -56,8 +44,33 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
 
   // --- Logic Helpers ---
 
+  // 1. Calculate Academic Year Start based on schoolInfo string (e.g., "2025-2026")
+  const startYear = useMemo(() => {
+    // Try to find the first 4-digit number
+    const match = schoolInfo.academicYear.match(/\d{4}/);
+    return match ? parseInt(match[0]) : new Date().getFullYear();
+  }, [schoolInfo.academicYear]);
+
+  // 2. Generate Months dynamically based on startYear
+  const monthsOrder = useMemo(() => {
+    return [
+      { name: 'Septiembre', year: startYear, monthIdx: 8 },
+      { name: 'Octubre', year: startYear, monthIdx: 9 },
+      { name: 'Noviembre', year: startYear, monthIdx: 10 },
+      { name: 'Diciembre', year: startYear, monthIdx: 11 },
+      { name: 'Enero', year: startYear + 1, monthIdx: 0 },
+      { name: 'Febrero', year: startYear + 1, monthIdx: 1 },
+      { name: 'Marzo', year: startYear + 1, monthIdx: 2 },
+      { name: 'Abril', year: startYear + 1, monthIdx: 3 },
+      { name: 'Mayo', year: startYear + 1, monthIdx: 4 },
+      { name: 'Junio', year: startYear + 1, monthIdx: 5 },
+    ];
+  }, [startYear]);
+
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => {
+    // JS Date.getDay(): 0=Sun, 1=Mon... 6=Sat
+    // We want Mon=0, Tue=1... Sun=6
     const day = new Date(year, month, 1).getDay();
     return day === 0 ? 6 : day - 1;
   };
@@ -73,18 +86,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
   const getDayStatus = (dateStr: string) => {
     const date = new Date(dateStr);
     let dayOfWeek = date.getDay(); 
-    if (dayOfWeek === 0) dayOfWeek = 7; // Convert Sun=0 to Sun=7 to match schedule if needed, but schedule usually 1-5
+    if (dayOfWeek === 0) dayOfWeek = 7; // Convert Sun=0 to Sun=7 to match schedule logic
 
     // 1. Check if it's a "Free" day (Holiday or Weekend)
     const dayEvents = getEventsForDate(dateStr);
-    const hasEvents = dayEvents.length > 0;
     // Assume if it has an event with red color (often holidays), it's not a class day. 
-    // This is a heuristic. Ideally LegendItem has a type.
     const isHoliday = dayEvents.some(e => {
         const item = getLegendItem(e.legendItemId);
         return item?.color === '#DC2626' || item?.label.toLowerCase().includes('festivo') || item?.label.toLowerCase().includes('inicio');
     });
 
+    // Weekends (Saturday=6, Sunday=7 in our converted logic)
     if (dayOfWeek > 5 || isHoliday) return { status: 'FREE', planned: 0, logged: 0 };
 
     // 2. Calculate Planned Hours
@@ -153,7 +165,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', 'calendario_escolar_25_26.ics');
+    link.setAttribute('download', `calendario_escolar_${startYear}_${startYear+1}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -164,7 +176,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
       <header className="flex flex-col md:flex-row justify-between md:items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            Calendario Escolar
+            Calendario Escolar {startYear}-{startYear+1}
             {isLocked ? <Lock size={20} className="text-chef-600"/> : <Unlock size={20} className="text-gray-400"/>}
           </h2>
           <p className="text-sm text-gray-500">
@@ -264,7 +276,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
 
       {/* Grid de Meses */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 select-none">
-        {MONTHS_ORDER.map(({ name, year, monthIdx }) => {
+        {monthsOrder.map(({ name, year, monthIdx }) => {
           const daysInMonth = getDaysInMonth(year, monthIdx);
           const firstDayOffset = getFirstDayOfMonth(year, monthIdx);
           const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -272,8 +284,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
 
           return (
             <div key={`${name}-${year}`} className="bg-white border border-gray-300 shadow-sm">
-              <div className="bg-[#0070C0] text-white text-center py-1 font-bold uppercase tracking-wider text-sm">
-                {name}
+              <div className="bg-[#0070C0] text-white text-center py-1 font-bold uppercase tracking-wider text-sm flex justify-between px-3">
+                <span>{name}</span>
+                <span className="opacity-70 text-xs mt-0.5">{year}</span>
               </div>
               <div className="grid grid-cols-7 border-b border-gray-300 bg-gray-100 text-xs font-bold text-center py-1">
                 <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
@@ -293,7 +306,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
 
                   // --- LOCKED MODE LOGIC ---
                   let trackingBgClass = '';
-                  let trackingBorderClass = '';
                   
                   if (isLocked) {
                       const { status } = getDayStatus(dateStr);
@@ -303,10 +315,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
                       else if (status === 'FREE') trackingBgClass = isWeekend ? 'bg-gray-100' : 'bg-white';
                   }
 
-                  // Priority: Event Color overrides Tracking BG if event exists, 
-                  // BUT in locked mode, if we have missing classes on a non-holiday, we want to see it.
-                  // Strategy: Use Event color as main BG, but if Locked and Missing/Partial, add a border/indicator.
-                  
                   const cellStyle = {
                     backgroundColor: !hasMultiple && primaryEvent 
                         ? primaryEvent.color 
@@ -327,13 +335,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
                     >
                       <span className={`font-medium leading-none z-10 ${primaryEvent && !hasMultiple ? 'text-black drop-shadow-sm' : ''}`}>{day}</span>
                       
-                      {/* Tracking Indicators (Locked Mode) */}
-                      {isLocked && !primaryEvent && (
-                          <div className="absolute top-1 right-1">
-                             {/* Optional: Small dot for status if needed, but background covers it */}
-                          </div>
-                      )}
-
                       {/* Multiple Events Indicator */}
                       {hasMultiple && (
                         <div className="flex gap-0.5 mt-1 w-full px-1 justify-center flex-wrap h-4 overflow-hidden">

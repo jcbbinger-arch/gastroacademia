@@ -26,14 +26,15 @@ import ScheduleConfigurator from './components/ScheduleConfigurator';
 import SettingsPanel from './components/SettingsPanel';
 import ReportsCenter from './components/ReportsCenter';
 import BackupManager from './components/BackupManager';
+import LandingPage from './components/LandingPage';
 
 import { COURSES_DATA, EVALUATIONS_DATA, CALENDAR_EVENTS, TEACHER_SCHEDULE, INITIAL_LOGS } from './constants';
 import { Course, ScheduleSlot, ClassLog, SchoolInfo, TeacherInfo, BackupData, CalendarEvent } from './types';
 
-type View = 'dashboard' | 'calendar' | 'units' | 'journal' | 'ai' | 'config' | 'schedule' | 'settings' | 'reports' | 'backup';
+type View = 'landing' | 'dashboard' | 'calendar' | 'units' | 'journal' | 'ai' | 'config' | 'schedule' | 'settings' | 'reports' | 'backup';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [currentView, setCurrentView] = useState<View>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Shared Data State
@@ -72,6 +73,15 @@ const App: React.FC = () => {
     if (data.calendarEvents) setCalendarEvents(data.calendarEvents);
   };
 
+  if (currentView === 'landing') {
+    return (
+      <LandingPage 
+        onEnter={() => setCurrentView('dashboard')} 
+        creatorName="Juan Codina"
+      />
+    );
+  }
+
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
@@ -82,6 +92,7 @@ const App: React.FC = () => {
                   logs={logs} 
                   schedule={schedule} 
                   courses={courses}
+                  schoolInfo={schoolInfo}
                   onNavigateToJournal={handleNavigateToJournal}
                 />;
       case 'journal':
