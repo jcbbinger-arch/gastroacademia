@@ -1,11 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import { COURSES_DATA, EVALUATIONS_DATA } from "../constants";
 
+// Declaración para evitar errores de TS al usar process.env que será reemplazado por Vite
+declare var process: { env: { API_KEY: string } };
+
 let client: GoogleGenAI | null = null;
 
 const getClient = () => {
-  // Verificación de seguridad para evitar crashes si process no está definido
-  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+  // Vite reemplazará process.env.API_KEY con el valor real en tiempo de compilación.
+  // Usamos una verificación segura por si acaso.
+  const apiKey = process.env.API_KEY;
 
   if (!client && apiKey) {
     client = new GoogleGenAI({ apiKey: apiKey });
