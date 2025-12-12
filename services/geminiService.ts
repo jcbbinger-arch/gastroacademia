@@ -4,8 +4,11 @@ import { COURSES_DATA, EVALUATIONS_DATA } from "../constants";
 let client: GoogleGenAI | null = null;
 
 const getClient = () => {
-  if (!client && process.env.API_KEY) {
-    client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Verificación de seguridad para evitar crashes si process no está definido
+  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+
+  if (!client && apiKey) {
+    client = new GoogleGenAI({ apiKey: apiKey });
   }
   return client;
 };
@@ -15,7 +18,10 @@ export const generateAcademicResponse = async (
   history: { role: string; parts: { text: string }[] }[]
 ): Promise<string> => {
   const genAI = getClient();
-  if (!genAI) throw new Error("API Key not found");
+  if (!genAI) {
+    console.warn("API Key no configurada o cliente no inicializado.");
+    return "El asistente virtual no está conectado (Falta API Key). Por favor, consulta la información manualmente.";
+  }
 
   const contextData = JSON.stringify({ courses: COURSES_DATA, evaluations: EVALUATIONS_DATA });
 
