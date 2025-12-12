@@ -5,8 +5,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Reemplaza process.env.API_KEY con el valor real durante el build
-    // Se usa JSON.stringify para asegurar que se inserte como string válido
+    // Asegura que process.env.API_KEY se reemplace correctamente en el bundle final
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || "")
+  },
+  server: {
+    port: 3000
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false
   }
 });
