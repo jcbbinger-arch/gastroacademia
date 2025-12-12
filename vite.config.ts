@@ -5,7 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Esto evita el error "Uncaught ReferenceError: process is not defined"
-    'process.env': {} 
+    // Correct way to pass env var in Vite if it exists in system environment
+    // Use optional chaining or fallback to avoid build errors if env is missing locally
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY || "")
   }
 });
