@@ -5,23 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GastroAcademia - Gestión Académica</title>
     
-    <!-- Polyfill para evitar "process is not defined" (Causa común de pantalla blanca) -->
+    <!-- Polyfill mínimo para compatibilidad con librerías legacy -->
     <script>
-      window.process = { env: { NODE_ENV: 'production' } };
+      window.process = window.process || { env: { NODE_ENV: 'production' } };
     </script>
 
-    <!-- Fuente Manrope para un diseño "Grueso y Fuerte" -->
+    <!-- Fuente Manrope -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
 
+    <!-- Tailwind CSS (CDN para prototipado rápido, compatible con este setup) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Manrope', 'sans-serif'], // Fuente principal más robusta
+              sans: ['Manrope', 'sans-serif'],
             },
             colors: {
               chef: {
@@ -42,7 +43,7 @@
               }
             },
             borderWidth: {
-              '3': '3px', // Borde personalizado más grueso
+              '3': '3px',
             }
           }
         }
