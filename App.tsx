@@ -74,6 +74,31 @@ const App: React.FC = () => {
     if (data.calendarEvents) setCalendarEvents(data.calendarEvents);
   };
 
+  const handleResetApp = () => {
+    // Reset to initial constants (Factory Reset)
+    // We keep the initial constants structure but clear user logs and custom settings
+    setCourses(COURSES_DATA);
+    setSchedule(TEACHER_SCHEDULE);
+    setLogs([]); // Clear all daily logs
+    setCalendarEvents(CALENDAR_EVENTS);
+    
+    // Reset identity to defaults
+    setSchoolInfo({
+        name: "Nombre del Centro",
+        logoUrl: "", 
+        academicYear: "2025-2026",
+        department: "Dpto. Hostelería y Turismo"
+    });
+    setTeacherInfo({
+        name: "Nombre del Profesor",
+        role: "Docente",
+        avatarUrl: "" 
+    });
+    
+    alert("La aplicación ha sido restablecida a sus valores de fábrica. Todos los datos locales han sido borrados.");
+    setCurrentView('dashboard');
+  };
+
   if (currentView === 'landing') {
     return (
       <LandingPage 
@@ -122,6 +147,7 @@ const App: React.FC = () => {
                   schoolInfo={schoolInfo} 
                   teacherInfo={teacherInfo}
                   onImportData={handleImportData}
+                  onResetData={handleResetApp}
                />;
       case 'settings':
         return <SettingsPanel 

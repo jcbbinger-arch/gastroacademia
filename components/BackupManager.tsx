@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BackupData, Course, ScheduleSlot, ClassLog, CalendarEvent, SchoolInfo, TeacherInfo } from '../types';
-import { Download, Upload, Database, CheckCircle, AlertTriangle, FileJson, RefreshCw } from 'lucide-react';
+import { Download, Upload, Database, CheckCircle, AlertTriangle, FileJson, RefreshCw, Trash2 } from 'lucide-react';
 
 interface BackupManagerProps {
   courses: Course[];
@@ -10,10 +10,11 @@ interface BackupManagerProps {
   schoolInfo: SchoolInfo;
   teacherInfo: TeacherInfo;
   onImportData: (data: BackupData) => void;
+  onResetData: () => void;
 }
 
 const BackupManager: React.FC<BackupManagerProps> = ({ 
-  courses, schedule, logs, events, schoolInfo, teacherInfo, onImportData 
+  courses, schedule, logs, events, schoolInfo, teacherInfo, onImportData, onResetData 
 }) => {
   
   // Selection State for Export
@@ -71,6 +72,12 @@ const BackupManager: React.FC<BackupManagerProps> = ({
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleDangerReset = () => {
+    if (confirm('¡ATENCIÓN! ¿Estás seguro de borrar TODOS los datos de la aplicación?\n\nEsta acción eliminará registros de clase, personalizaciones y configuraciones. La aplicación volverá a su estado original.\n\nEsta acción NO se puede deshacer.')) {
+        onResetData();
+    }
   };
 
   return (
@@ -170,6 +177,29 @@ const BackupManager: React.FC<BackupManagerProps> = ({
                 </p>
             </div>
         </div>
+      </div>
+
+      {/* DANGER ZONE - RESET */}
+      <div className="mt-12 border-t-2 border-gray-200 pt-8">
+         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <AlertTriangle size={20} className="text-red-600" />
+            Zona de Peligro
+         </h3>
+         <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+               <p className="font-bold text-red-800 text-lg">Borrar todos los datos de la aplicación</p>
+               <p className="text-red-700 text-sm mt-1">
+                  Esta acción no se puede deshacer. Borrará todo el diario de clase, configuraciones de módulos, horarios y restaurará la aplicación al estado original (fábrica). 
+                  Asegúrate de exportar una copia antes si quieres conservar algo.
+               </p>
+            </div>
+            <button 
+                onClick={handleDangerReset}
+                className="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-2 whitespace-nowrap shadow-md"
+            >
+                <Trash2 size={20} /> Restaurar de Fábrica
+            </button>
+         </div>
       </div>
     </div>
   );

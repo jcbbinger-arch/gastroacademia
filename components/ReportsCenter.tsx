@@ -315,15 +315,11 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo
                     </div>
                  </div>
                  
-                 {/* Signatures Area for Official Reports */}
-                 <div className="mt-16 pt-8 border-t border-gray-300 flex justify-between break-inside-avoid">
+                 {/* Signatures Area for Official Reports - SINGLE SIGNATURE ONLY */}
+                 <div className="mt-16 pt-8 border-t border-gray-300 flex justify-center break-inside-avoid">
                      <div className="text-center w-64">
                          <div className="h-24 border-b border-gray-400 mb-2"></div>
                          <p className="text-xs font-bold uppercase text-gray-600">Fdo. El Profesor/a</p>
-                     </div>
-                     <div className="text-center w-64">
-                         <div className="h-24 border-b border-gray-400 mb-2"></div>
-                         <p className="text-xs font-bold uppercase text-gray-600">Vº Bº Jefatura de Estudios</p>
                      </div>
                  </div>
              </div>
