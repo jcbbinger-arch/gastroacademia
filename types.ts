@@ -86,6 +86,7 @@ export interface SchoolInfo {
   name: string;
   logoUrl: string; // URL o Base64
   academicYear: string; // "2025-2026"
+  department: string; // Nuevo: Departamento (editable)
 }
 
 export interface TeacherInfo {

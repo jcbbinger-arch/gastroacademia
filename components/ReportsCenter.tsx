@@ -170,7 +170,7 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo
                 </div>
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 uppercase tracking-tight">{schoolInfo.name}</h1>
-                    <p className="text-sm font-semibold text-gray-600">Dpto. Hostelería y Turismo</p>
+                    <p className="text-sm font-semibold text-gray-600">{schoolInfo.department}</p>
                     <p className="text-xs text-gray-500 mt-1">Curso Académico: <span className="font-bold text-gray-800">{schoolInfo.academicYear}</span></p>
                 </div>
             </div>

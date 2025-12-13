@@ -64,6 +64,17 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ schoolInfo, setSchoolInfo
             </div>
 
             <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Departamento / Familia Profesional</label>
+              <input
+                type="text"
+                value={localSchool.department}
+                onChange={(e) => setLocalSchool({ ...localSchool, department: e.target.value })}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none"
+                placeholder="Ej: Dpto. Hostelería y Turismo / Dpto. Idiomas"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Año Académico</label>
               <input
                 type="text"

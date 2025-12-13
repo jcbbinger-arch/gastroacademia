@@ -48,7 +48,8 @@ const App: React.FC = () => {
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>({
     name: "IES La Flota",
     logoUrl: "", 
-    academicYear: "2025-2026"
+    academicYear: "2025-2026",
+    department: "Dpto. Hostelería y Turismo"
   });
   
   const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>({
