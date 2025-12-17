@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BackupData, Course, ScheduleSlot, ClassLog, CalendarEvent, SchoolInfo, TeacherInfo } from '../types';
+import { BackupData, Course, ScheduleSlot, ClassLog, CalendarEvent, SchoolInfo, TeacherInfo, Exam } from '../types';
 import { Download, Upload, Database, CheckCircle, AlertTriangle, FileJson, RefreshCw, Trash2 } from 'lucide-react';
 
 interface BackupManagerProps {
@@ -7,6 +7,7 @@ interface BackupManagerProps {
   schedule: ScheduleSlot[];
   logs: ClassLog[];
   events: CalendarEvent[];
+  exams: Exam[];
   schoolInfo: SchoolInfo;
   teacherInfo: TeacherInfo;
   onImportData: (data: BackupData) => void;
@@ -14,7 +15,7 @@ interface BackupManagerProps {
 }
 
 const BackupManager: React.FC<BackupManagerProps> = ({ 
-  courses, schedule, logs, events, schoolInfo, teacherInfo, onImportData, onResetData 
+  courses, schedule, logs, events, exams, schoolInfo, teacherInfo, onImportData, onResetData 
 }) => {
   
   // Selection State for Export
@@ -39,6 +40,7 @@ const BackupManager: React.FC<BackupManagerProps> = ({
       schedule: selectedExport.schedule ? schedule : undefined,
       logs: selectedExport.logs ? logs : undefined,
       calendarEvents: selectedExport.calendar ? events : undefined,
+      exams: selectedExport.logs ? exams : undefined, // Bind exams to logs export selection for now
     };
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
@@ -119,8 +121,8 @@ const BackupManager: React.FC<BackupManagerProps> = ({
                 <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="checkbox" checked={selectedExport.logs} onChange={() => handleToggleExport('logs')} className="w-5 h-5 text-chef-600 rounded focus:ring-chef-500" />
                     <div>
-                        <span className="font-bold text-gray-700 block">Diario de Clase</span>
-                        <span className="text-xs text-gray-400">Todos los registros de sesiones.</span>
+                        <span className="font-bold text-gray-700 block">Diario y Exámenes</span>
+                        <span className="text-xs text-gray-400">Registros de sesiones y pruebas.</span>
                     </div>
                 </label>
                 <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50">

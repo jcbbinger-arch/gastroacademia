@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { CalendarEvent, LegendItem, ClassLog, ScheduleSlot, Course, SchoolInfo } from '../types';
-import { Download, Plus, Trash2, X, Settings, CheckSquare, Square, Lock, Unlock, Eye, AlertCircle, NotebookPen, Calendar } from 'lucide-react';
+import { CalendarEvent, LegendItem, ClassLog, ScheduleSlot, Course, SchoolInfo, Exam } from '../types';
+import { Download, Plus, Trash2, X, Settings, CheckSquare, Square, Lock, Unlock, Eye, AlertCircle, NotebookPen, Calendar, GraduationCap } from 'lucide-react';
 import { INITIAL_LEGEND_ITEMS, CALENDAR_EVENTS } from '../constants';
 
 interface CalendarViewProps {
   events: CalendarEvent[];
   logs: ClassLog[];
+  exams: Exam[];
   schedule: ScheduleSlot[];
   courses: Course[];
   schoolInfo: SchoolInfo;
@@ -34,6 +35,7 @@ const PRESET_COLORS = [
 const CalendarView: React.FC<CalendarViewProps> = ({ 
   events: initialEvents, 
   logs, 
+  exams,
   schedule, 
   courses, 
   schoolInfo, 
@@ -44,7 +46,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   // State
   const [legendItems, setLegendItems] = useState<LegendItem[]>(INITIAL_LEGEND_ITEMS);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(initialEvents || CALENDAR_EVENTS);
-  // Removed local isLocked state, using props instead
   
   // UI State
   const [showLegendEditor, setShowLegendEditor] = useState(false);
@@ -89,6 +90,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const getEventsForDate = (dateStr: string) => {
     return calendarEvents.filter(e => e.date === dateStr);
+  };
+  
+  const getExamsForDate = (dateStr: string) => {
+      return exams.filter(e => e.date === dateStr);
   };
 
   const getLegendItem = (id: string) => legendItems.find(i => i.id === id);
@@ -164,6 +169,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const downloadICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//CuliPlan//NONSGML v1.0//EN\n";
+    // Events
     calendarEvents.forEach(event => {
       const legend = getLegendItem(event.legendItemId);
       if (!legend) return;
@@ -173,6 +179,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       icsContent += `SUMMARY:${legend.label}\n`;
       icsContent += "END:VEVENT\n";
     });
+    // Exams
+    exams.forEach(exam => {
+        const course = courses.find(c => c.id === exam.courseId);
+        const dateStr = exam.date.replace(/-/g, '');
+        icsContent += "BEGIN:VEVENT\n";
+        icsContent += `DTSTART;VALUE=DATE:${dateStr}\n`;
+        icsContent += `SUMMARY:EXAMEN ${exam.type} - ${course?.name || ''}\n`;
+        icsContent += `DESCRIPTION:${exam.topics}\n`;
+        icsContent += "END:VEVENT\n";
+    });
+
     icsContent += "END:VCALENDAR";
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
@@ -310,10 +327,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 {days.map(day => {
                   const dateStr = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                   const dayEvents = getEventsForDate(dateStr);
+                  const dayExams = getExamsForDate(dateStr);
                   const isWeekend = (firstDayOffset + day - 1) % 7 >= 5;
                   
                   // Visual Logic
                   const primaryEvent = dayEvents.length > 0 ? getLegendItem(dayEvents[0].legendItemId) : null;
+                  const hasExams = dayExams.length > 0;
                   const hasMultiple = dayEvents.length > 1;
 
                   // --- LOCKED MODE LOGIC ---
@@ -347,6 +366,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                     >
                       <span className={`font-medium leading-none z-10 ${primaryEvent && !hasMultiple ? 'text-black drop-shadow-sm' : ''}`}>{day}</span>
                       
+                      {/* EXAM INDICATOR */}
+                      {hasExams && (
+                          <div className="absolute top-0.5 right-0.5 z-20">
+                              <GraduationCap size={12} className="text-purple-700 drop-shadow-sm fill-purple-100" />
+                          </div>
+                      )}
+
                       {/* Multiple Events Indicator */}
                       {hasMultiple && (
                         <div className="flex gap-0.5 mt-1 w-full px-1 justify-center flex-wrap h-4 overflow-hidden">
@@ -382,6 +408,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                             <span className="text-xs text-gray-600">{item.label}</span>
                         </div>
                     ))}
+                    {/* EXAM LEGEND */}
+                    <div className="flex items-center gap-2">
+                         <GraduationCap size={16} className="text-purple-700"/>
+                         <span className="text-xs text-gray-600 font-bold">Examen / Prueba</span>
+                    </div>
                 </div>
                 
                 {/* Leyenda Visual (Modo Seguimiento - Adicional) */}
@@ -428,6 +459,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         // Check for Legend Events on this day
                         const dayEvents = getEventsForDate(selectedDate);
                         const eventItems = dayEvents.map(e => getLegendItem(e.legendItemId)).filter(Boolean);
+                        
+                        // Check for Exams
+                        const dayExams = getExamsForDate(selectedDate);
 
                         return (
                             <div className="space-y-4">
@@ -440,6 +474,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                                                 <span className="font-bold text-gray-700">{item?.label}</span>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                {/* Display Exams if any */}
+                                {dayExams.length > 0 && (
+                                    <div className="mb-4">
+                                        <h4 className="font-bold text-xs text-purple-700 uppercase mb-2">Pruebas Evaluables</h4>
+                                        {dayExams.map(ex => {
+                                            const exCourse = courses.find(c => c.id === ex.courseId);
+                                            return (
+                                                <div key={ex.id} className="p-3 bg-purple-50 border border-purple-100 rounded-lg mb-2">
+                                                    <div className="font-bold text-purple-900 text-sm">{exCourse?.name}</div>
+                                                    <div className="text-xs text-purple-700 mt-1">
+                                                        <span className="font-bold bg-white px-1 rounded">{ex.type}</span> • {ex.unitIds.length} UDs
+                                                    </div>
+                                                    <p className="text-xs text-gray-600 mt-1 italic">{ex.topics}</p>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 )}
 

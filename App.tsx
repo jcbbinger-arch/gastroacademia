@@ -29,7 +29,7 @@ import BackupManager from './components/BackupManager';
 import LandingPage from './components/LandingPage';
 
 import { COURSES_DATA, EVALUATIONS_DATA, CALENDAR_EVENTS, TEACHER_SCHEDULE, INITIAL_LOGS } from './constants';
-import { Course, ScheduleSlot, ClassLog, SchoolInfo, TeacherInfo, BackupData, CalendarEvent } from './types';
+import { Course, ScheduleSlot, ClassLog, SchoolInfo, TeacherInfo, BackupData, CalendarEvent, Exam } from './types';
 
 type View = 'landing' | 'dashboard' | 'calendar' | 'units' | 'journal' | 'ai' | 'config' | 'schedule' | 'settings' | 'reports' | 'backup';
 
@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(() => loadState('gastro_schedule', TEACHER_SCHEDULE));
   const [logs, setLogs] = useState<ClassLog[]>(() => loadState('gastro_logs', INITIAL_LOGS));
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadState('gastro_events', CALENDAR_EVENTS));
+  const [exams, setExams] = useState<Exam[]>(() => loadState('gastro_exams', []));
   
   // Calendar Lock State (Lifted Up for Persistence)
   const [isCalendarLocked, setIsCalendarLocked] = useState<boolean>(() => loadState('gastro_calendar_locked', false));
@@ -77,6 +78,7 @@ const App: React.FC = () => {
   useEffect(() => { localStorage.setItem('gastro_schedule', JSON.stringify(schedule)); }, [schedule]);
   useEffect(() => { localStorage.setItem('gastro_logs', JSON.stringify(logs)); }, [logs]);
   useEffect(() => { localStorage.setItem('gastro_events', JSON.stringify(calendarEvents)); }, [calendarEvents]);
+  useEffect(() => { localStorage.setItem('gastro_exams', JSON.stringify(exams)); }, [exams]);
   useEffect(() => { localStorage.setItem('gastro_schoolInfo', JSON.stringify(schoolInfo)); }, [schoolInfo]);
   useEffect(() => { localStorage.setItem('gastro_teacherInfo', JSON.stringify(teacherInfo)); }, [teacherInfo]);
   useEffect(() => { localStorage.setItem('gastro_calendar_locked', JSON.stringify(isCalendarLocked)); }, [isCalendarLocked]);
@@ -95,6 +97,7 @@ const App: React.FC = () => {
     if (data.schoolInfo) setSchoolInfo(data.schoolInfo);
     if (data.teacherInfo) setTeacherInfo(data.teacherInfo);
     if (data.calendarEvents) setCalendarEvents(data.calendarEvents);
+    if (data.exams) setExams(data.exams);
   };
 
   const handleResetApp = () => {
@@ -103,6 +106,7 @@ const App: React.FC = () => {
     localStorage.removeItem('gastro_schedule');
     localStorage.removeItem('gastro_logs');
     localStorage.removeItem('gastro_events');
+    localStorage.removeItem('gastro_exams');
     localStorage.removeItem('gastro_schoolInfo');
     localStorage.removeItem('gastro_teacherInfo');
     localStorage.removeItem('gastro_calendar_locked');
@@ -112,6 +116,7 @@ const App: React.FC = () => {
     setSchedule(TEACHER_SCHEDULE);
     setLogs([]); 
     setCalendarEvents(CALENDAR_EVENTS);
+    setExams([]);
     setIsCalendarLocked(false);
     
     setSchoolInfo({
@@ -147,6 +152,7 @@ const App: React.FC = () => {
         return <CalendarView 
                   events={calendarEvents} 
                   logs={logs} 
+                  exams={exams}
                   schedule={schedule} 
                   courses={courses}
                   schoolInfo={schoolInfo}
@@ -160,6 +166,8 @@ const App: React.FC = () => {
                   schedule={schedule} 
                   logs={logs} 
                   setLogs={setLogs}
+                  exams={exams}
+                  setExams={setExams}
                   date={journalDate}
                   setDate={setJournalDate}
                 />;
@@ -170,13 +178,14 @@ const App: React.FC = () => {
       case 'schedule':
         return <ScheduleConfigurator courses={courses} schedule={schedule} onUpdateSchedule={setSchedule} />;
       case 'reports':
-        return <ReportsCenter courses={courses} logs={logs} schoolInfo={schoolInfo} teacherInfo={teacherInfo} />;
+        return <ReportsCenter courses={courses} logs={logs} exams={exams} schoolInfo={schoolInfo} teacherInfo={teacherInfo} />;
       case 'backup':
         return <BackupManager 
                   courses={courses} 
                   schedule={schedule} 
                   logs={logs} 
                   events={calendarEvents} 
+                  exams={exams}
                   schoolInfo={schoolInfo} 
                   teacherInfo={teacherInfo}
                   onImportData={handleImportData}

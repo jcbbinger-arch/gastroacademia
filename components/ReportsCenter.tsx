@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { Course, ClassLog, SchoolInfo, TeacherInfo } from '../types';
-import { FileText, Printer, Filter, BookOpen, ChefHat, UserCircle, School } from 'lucide-react';
+import { Course, ClassLog, SchoolInfo, TeacherInfo, Exam } from '../types';
+import { FileText, Printer, Filter, BookOpen, ChefHat, UserCircle, School, GraduationCap } from 'lucide-react';
 
 interface ReportsCenterProps {
   courses: Course[];
   logs: ClassLog[];
+  exams: Exam[];
   schoolInfo: SchoolInfo;
   teacherInfo: TeacherInfo;
 }
 
-const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo, teacherInfo }) => {
+const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, schoolInfo, teacherInfo }) => {
   const [selectedReportType, setSelectedReportType] = useState<'global' | 'module' | 'date'>('global');
   const [selectedModuleId, setSelectedModuleId] = useState<string>(courses[0]?.id || '');
 
@@ -264,6 +265,46 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo
                             {generateModuleStats(currentModule).completedUnits} / {currentModule.units.length} UD Completadas
                         </span>
                     </div>
+                 </div>
+
+                 {/* EXAMS SECTION */}
+                 <div className="col-span-1 mb-8">
+                    <h3 className="font-bold text-gray-700 mb-4 border-l-4 border-purple-600 pl-3">Registro de Exámenes y Pruebas</h3>
+                    {exams.filter(e => e.courseId === currentModule.id).length === 0 ? (
+                        <p className="text-gray-400 italic text-sm">No hay exámenes registrados para este módulo.</p>
+                    ) : (
+                        <table className="w-full text-sm border-collapse border border-gray-200">
+                            <thead className="bg-purple-50 text-purple-900 text-xs uppercase font-bold">
+                                <tr>
+                                    <th className="p-2 border border-gray-200 text-left">Fecha</th>
+                                    <th className="p-2 border border-gray-200 text-center">Tipo</th>
+                                    <th className="p-2 border border-gray-200 text-left">Temario / Descripción</th>
+                                    <th className="p-2 border border-gray-200 text-center">Unidades Afectadas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {exams.filter(e => e.courseId === currentModule.id).map(ex => (
+                                    <tr key={ex.id} className="hover:bg-purple-50/20">
+                                        <td className="p-2 border border-gray-200 font-mono">
+                                            {new Date(ex.date).toLocaleDateString()}
+                                        </td>
+                                        <td className="p-2 border border-gray-200 text-center">
+                                            <span className="font-bold">{ex.type}</span>
+                                        </td>
+                                        <td className="p-2 border border-gray-200 text-gray-700">
+                                            {ex.topics}
+                                        </td>
+                                        <td className="p-2 border border-gray-200 text-center">
+                                            {ex.unitIds.map(uid => {
+                                                const u = currentModule.units.find(unit => unit.id === uid);
+                                                return <span key={uid} className="inline-block bg-gray-100 text-xs px-1 rounded mr-1">{u?.title.split(':')[0]}</span>
+                                            })}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                  </div>
 
                  <div className="grid grid-cols-1 gap-8">

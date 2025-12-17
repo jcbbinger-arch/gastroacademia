@@ -64,6 +64,16 @@ export interface Evaluation {
   completed: boolean;
 }
 
+// --- NUEVO: Entidad Examen ---
+export interface Exam {
+  id: string;
+  courseId: string;
+  date: string;
+  type: 'Teórico' | 'Práctico';
+  unitIds: string[]; // Puede cubrir varias unidades
+  topics: string; // Temario específico o descripción
+}
+
 // --- Tipos para el Calendario Dinámico ---
 
 export interface LegendItem {
@@ -132,4 +142,5 @@ export interface BackupData {
   schedule?: ScheduleSlot[];
   logs?: ClassLog[];
   calendarEvents?: CalendarEvent[];
+  exams?: Exam[];
 }
