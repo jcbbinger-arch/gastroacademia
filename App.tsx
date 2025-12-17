@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   CalendarDays, 
@@ -33,30 +33,53 @@ import { Course, ScheduleSlot, ClassLog, SchoolInfo, TeacherInfo, BackupData, Ca
 
 type View = 'landing' | 'dashboard' | 'calendar' | 'units' | 'journal' | 'ai' | 'config' | 'schedule' | 'settings' | 'reports' | 'backup';
 
+// Helper to load from LocalStorage or fallback to default
+const loadState = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch (e) {
+    console.warn(`Error loading ${key} from localStorage`, e);
+    return fallback;
+  }
+};
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Shared Data State
-  const [courses, setCourses] = useState<Course[]>(COURSES_DATA);
-  const [schedule, setSchedule] = useState<ScheduleSlot[]>(TEACHER_SCHEDULE);
-  const [logs, setLogs] = useState<ClassLog[]>(INITIAL_LOGS);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(CALENDAR_EVENTS);
+  // Shared Data State with Persistence
+  const [courses, setCourses] = useState<Course[]>(() => loadState('gastro_courses', COURSES_DATA));
+  const [schedule, setSchedule] = useState<ScheduleSlot[]>(() => loadState('gastro_schedule', TEACHER_SCHEDULE));
+  const [logs, setLogs] = useState<ClassLog[]>(() => loadState('gastro_logs', INITIAL_LOGS));
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadState('gastro_events', CALENDAR_EVENTS));
   
+  // Calendar Lock State (Lifted Up for Persistence)
+  const [isCalendarLocked, setIsCalendarLocked] = useState<boolean>(() => loadState('gastro_calendar_locked', false));
+
   const [journalDate, setJournalDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>({
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => loadState('gastro_schoolInfo', {
     name: "IES La Flota",
     logoUrl: "", 
     academicYear: "2025-2026",
     department: "Dpto. Hostelería y Turismo"
-  });
+  }));
   
-  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>({
+  const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>(() => loadState('gastro_teacherInfo', {
     name: "Juan Codina",
     role: "Profesor Técnico FP",
     avatarUrl: "" 
-  });
+  }));
+
+  // Effect to Auto-Save changes to LocalStorage
+  useEffect(() => { localStorage.setItem('gastro_courses', JSON.stringify(courses)); }, [courses]);
+  useEffect(() => { localStorage.setItem('gastro_schedule', JSON.stringify(schedule)); }, [schedule]);
+  useEffect(() => { localStorage.setItem('gastro_logs', JSON.stringify(logs)); }, [logs]);
+  useEffect(() => { localStorage.setItem('gastro_events', JSON.stringify(calendarEvents)); }, [calendarEvents]);
+  useEffect(() => { localStorage.setItem('gastro_schoolInfo', JSON.stringify(schoolInfo)); }, [schoolInfo]);
+  useEffect(() => { localStorage.setItem('gastro_teacherInfo', JSON.stringify(teacherInfo)); }, [teacherInfo]);
+  useEffect(() => { localStorage.setItem('gastro_calendar_locked', JSON.stringify(isCalendarLocked)); }, [isCalendarLocked]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -75,14 +98,22 @@ const App: React.FC = () => {
   };
 
   const handleResetApp = () => {
-    // Reset to initial constants (Factory Reset)
-    // We keep the initial constants structure but clear user logs and custom settings
+    // Clear LocalStorage
+    localStorage.removeItem('gastro_courses');
+    localStorage.removeItem('gastro_schedule');
+    localStorage.removeItem('gastro_logs');
+    localStorage.removeItem('gastro_events');
+    localStorage.removeItem('gastro_schoolInfo');
+    localStorage.removeItem('gastro_teacherInfo');
+    localStorage.removeItem('gastro_calendar_locked');
+
+    // Reset State
     setCourses(COURSES_DATA);
     setSchedule(TEACHER_SCHEDULE);
-    setLogs([]); // Clear all daily logs
+    setLogs([]); 
     setCalendarEvents(CALENDAR_EVENTS);
+    setIsCalendarLocked(false);
     
-    // Reset identity to defaults
     setSchoolInfo({
         name: "Nombre del Centro",
         logoUrl: "", 
@@ -95,7 +126,7 @@ const App: React.FC = () => {
         avatarUrl: "" 
     });
     
-    alert("La aplicación ha sido restablecida a sus valores de fábrica. Todos los datos locales han sido borrados.");
+    alert("La aplicación ha sido restablecida a sus valores de fábrica y la memoria local ha sido borrada.");
     setCurrentView('dashboard');
   };
 
@@ -120,6 +151,8 @@ const App: React.FC = () => {
                   courses={courses}
                   schoolInfo={schoolInfo}
                   onNavigateToJournal={handleNavigateToJournal}
+                  isLocked={isCalendarLocked}
+                  onToggleLock={setIsCalendarLocked}
                 />;
       case 'journal':
         return <DailyJournal 

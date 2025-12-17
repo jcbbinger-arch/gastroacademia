@@ -8,8 +8,11 @@ interface CalendarViewProps {
   logs: ClassLog[];
   schedule: ScheduleSlot[];
   courses: Course[];
-  schoolInfo: SchoolInfo; // Added prop for dynamic year calculation
+  schoolInfo: SchoolInfo;
   onNavigateToJournal: (date: string) => void;
+  // New props for persisted lock state
+  isLocked: boolean;
+  onToggleLock: (locked: boolean) => void;
 }
 
 const PRESET_COLORS = [
@@ -28,11 +31,20 @@ const PRESET_COLORS = [
   '#1E293B', // Dark Slate
 ];
 
-const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs, schedule, courses, schoolInfo, onNavigateToJournal }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ 
+  events: initialEvents, 
+  logs, 
+  schedule, 
+  courses, 
+  schoolInfo, 
+  onNavigateToJournal,
+  isLocked,
+  onToggleLock
+}) => {
   // State
   const [legendItems, setLegendItems] = useState<LegendItem[]>(INITIAL_LEGEND_ITEMS);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(initialEvents || CALENDAR_EVENTS);
-  const [isLocked, setIsLocked] = useState(false); // Locked = Tracking Mode, Unlocked = Edit Mode
+  // Removed local isLocked state, using props instead
   
   // UI State
   const [showLegendEditor, setShowLegendEditor] = useState(false);
@@ -189,13 +201,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ events: initialEvents, logs
            {/* Lock Toggle */}
            <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-4">
               <button 
-                onClick={() => setIsLocked(false)}
+                onClick={() => onToggleLock(false)}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${!isLocked ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 Editar
               </button>
               <button 
-                onClick={() => setIsLocked(true)}
+                onClick={() => onToggleLock(true)}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${isLocked ? 'bg-chef-600 shadow text-white' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 Bloquear / Seguimiento
