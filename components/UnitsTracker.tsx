@@ -35,11 +35,13 @@ const UnitsTracker: React.FC<UnitsTrackerProps> = ({ courses }) => {
         <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-chef-50 p-4 border-b border-chef-100">
             <h3 className="font-bold text-lg text-chef-900">{course.name}</h3>
-            <span className="text-xs text-chef-600 uppercase tracking-wide">{course.type}</span>
+            <span className="text-xs text-chef-600 uppercase tracking-wide">{course.cycle}</span>
           </div>
           
           <div className="divide-y divide-gray-100">
-            {course.units.map((unit) => (
+            {course.units.map((unit) => {
+              const totalPlanned = unit.hoursPlannedTheory + unit.hoursPlannedPractice;
+              return (
               <div key={unit.id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                   <div className="flex-1">
@@ -54,15 +56,15 @@ const UnitsTracker: React.FC<UnitsTrackerProps> = ({ courses }) => {
                     <div className="flex-1">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-500">Progreso Horas</span>
-                        <span className="font-medium">{unit.hoursRealized} / {unit.hoursPlanned} h</span>
+                        <span className="font-medium">{unit.hoursRealized} / {totalPlanned} h</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className={`h-2 rounded-full transition-all duration-500 ${
-                            unit.hoursRealized >= unit.hoursPlanned ? 'bg-green-500' : 
+                            unit.hoursRealized >= totalPlanned ? 'bg-green-500' : 
                             unit.status === UnitStatus.DELAYED ? 'bg-red-400' : 'bg-chef-500'
                           }`}
-                          style={{ width: `${Math.min(100, (unit.hoursRealized / unit.hoursPlanned) * 100)}%` }}
+                          style={{ width: `${Math.min(100, totalPlanned > 0 ? (unit.hoursRealized / totalPlanned) * 100 : 0)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -72,11 +74,11 @@ const UnitsTracker: React.FC<UnitsTrackerProps> = ({ courses }) => {
                 {unit.status === UnitStatus.DELAYED && (
                   <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 p-2 rounded">
                     <AlertCircle size={14} />
-                    <span>Esta unidad lleva un retraso de {unit.hoursPlanned - unit.hoursRealized} horas respecto a lo planificado. Se sugiere ajuste.</span>
+                    <span>Esta unidad lleva un retraso de {Math.max(0, totalPlanned - unit.hoursRealized)} horas respecto a lo planificado. Se sugiere ajuste.</span>
                   </div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       ))}

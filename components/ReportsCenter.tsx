@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Course, ClassLog, SchoolInfo, TeacherInfo } from '../types';
-import { FileText, Printer, Filter, BookOpen, CalendarDays, ChevronRight, UserCircle, School } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { FileText, Printer, Filter, BookOpen, ChefHat, UserCircle, School } from 'lucide-react';
 
 interface ReportsCenterProps {
   courses: Course[];
@@ -33,15 +32,7 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo
     const hoursLogged = logs.filter(l => l.courseId === course.id).reduce((acc, l) => acc + l.hours, 0);
     const logsCount = logs.filter(l => l.courseId === course.id).length;
     
-    // Units Data for Chart
-    const pieData = [
-        { name: 'Completado', value: completedUnits, color: '#22c55e' },
-        { name: 'En Progreso', value: course.units.filter(u => u.status === 'En Progreso').length, color: '#3b82f6' },
-        { name: 'Pendiente', value: course.units.filter(u => u.status === 'Pendiente').length, color: '#94a3b8' },
-        { name: 'Retrasado', value: course.units.filter(u => u.status === 'Retrasado').length, color: '#ef4444' }
-    ].filter(d => d.value > 0);
-
-    return { completedUnits, hoursLogged, logsCount, pieData };
+    return { completedUnits, hoursLogged, logsCount };
   };
 
   // --- Logic for Date Grouping ---
@@ -275,42 +266,78 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, schoolInfo
                     </div>
                  </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="col-span-3">
-                        <h3 className="font-bold text-gray-700 mb-4 border-l-4 border-chef-600 pl-3">Programación de Unidades Didácticas</h3>
+                 <div className="grid grid-cols-1 gap-8">
+                    <div className="col-span-1">
+                        <h3 className="font-bold text-gray-700 mb-4 border-l-4 border-chef-600 pl-3">Desglose de Unidades: Teoría vs Práctica</h3>
                         <div className="border border-gray-200 rounded-lg overflow-hidden">
                             <table className="w-full text-sm">
                                 <thead className="bg-gray-100 text-gray-600 text-xs uppercase font-bold">
                                     <tr>
-                                        <th className="p-3 text-left w-1/2">Título de la Unidad</th>
-                                        <th className="p-3 text-center">Horas Realizadas</th>
-                                        <th className="p-3 text-center">Horas Previstas</th>
+                                        <th className="p-3 text-left w-1/3">Unidad Didáctica</th>
+                                        <th className="p-3 text-center bg-blue-50 text-blue-800">H. Teóricas (Real/Plan)</th>
+                                        <th className="p-3 text-center bg-orange-50 text-orange-800">H. Prácticas (Real/Plan)</th>
+                                        <th className="p-3 text-center">Total (Real/Plan)</th>
                                         <th className="p-3 text-center">Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {currentModule.units.map(u => (
-                                        <tr key={u.id} className="break-inside-avoid hover:bg-gray-50">
-                                            <td className="p-3">
-                                                <p className="font-bold text-gray-800">{u.title}</p>
-                                                {/* Optional: Add description if needed for print clarity */}
-                                                {/* <p className="text-xs text-gray-500 mt-1">{u.description}</p> */}
-                                            </td>
-                                            <td className="p-3 text-center font-mono text-gray-700">{u.hoursRealized}</td>
-                                            <td className="p-3 text-center font-mono text-gray-500">{u.hoursPlanned}</td>
-                                            <td className="p-3 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                                                    u.status === 'Completado' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                    u.status === 'Retrasado' ? 'bg-red-50 text-red-700 border-red-200' : 
-                                                    'bg-gray-50 text-gray-600 border-gray-200'
-                                                }`}>
-                                                    {u.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {currentModule.units.map(u => {
+                                        // Calculate Realized Hours from Logs for this specific unit
+                                        const unitLogs = logs.filter(l => l.unitId === u.id);
+                                        const realTheory = unitLogs.filter(l => l.type === 'Teórica').reduce((acc, l) => acc + l.hours, 0);
+                                        const realPractice = unitLogs.filter(l => l.type === 'Práctica').reduce((acc, l) => acc + l.hours, 0);
+                                        const realTotal = realTheory + realPractice;
+                                        const planTotal = u.hoursPlannedTheory + u.hoursPlannedPractice;
+
+                                        return (
+                                            <tr key={u.id} className="break-inside-avoid hover:bg-gray-50">
+                                                <td className="p-3">
+                                                    <p className="font-bold text-gray-800">{u.title}</p>
+                                                </td>
+                                                {/* Theory Column */}
+                                                <td className="p-3 text-center border-l border-r border-blue-100 bg-blue-50/30">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`font-bold ${realTheory > u.hoursPlannedTheory ? 'text-red-500' : 'text-blue-700'}`}>
+                                                            {realTheory}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400 border-t border-gray-200 w-8 pt-0.5 mt-0.5">
+                                                            {u.hoursPlannedTheory}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {/* Practice Column */}
+                                                <td className="p-3 text-center border-r border-orange-100 bg-orange-50/30">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`font-bold ${realPractice > u.hoursPlannedPractice ? 'text-red-500' : 'text-orange-700'}`}>
+                                                            {realPractice}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400 border-t border-gray-200 w-8 pt-0.5 mt-0.5">
+                                                            {u.hoursPlannedPractice}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                {/* Totals */}
+                                                <td className="p-3 text-center font-mono font-bold text-gray-700">
+                                                    {realTotal} / {planTotal}
+                                                </td>
+                                                <td className="p-3 text-center">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${
+                                                        u.status === 'Completado' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                        u.status === 'Retrasado' ? 'bg-red-50 text-red-700 border-red-200' : 
+                                                        'bg-gray-50 text-gray-600 border-gray-200'
+                                                    }`}>
+                                                        {u.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
+                        </div>
+                        <div className="mt-2 flex gap-4 text-xs text-gray-500 justify-end">
+                            <div className="flex items-center gap-1"><BookOpen size={12} className="text-blue-600"/> Teoría</div>
+                            <div className="flex items-center gap-1"><ChefHat size={12} className="text-orange-600"/> Práctica</div>
                         </div>
                     </div>
                  </div>

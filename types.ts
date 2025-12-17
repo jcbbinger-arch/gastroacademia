@@ -10,20 +10,23 @@ export interface Unit {
   id: string;
   title: string;
   description: string;
-  hoursPlanned: number;
-  hoursRealized: number;
+  // Split hours structure
+  hoursPlannedTheory: number;
+  hoursPlannedPractice: number;
+  // hoursRealized is legacy/cache, but real calculation comes from Logs
+  hoursRealized: number; 
   status: UnitStatus;
-  trimestres: number[]; // Changed to array to allow units spanning multiple trimesters
+  trimestres: number[]; 
 }
 
 export interface Course {
   id: string;
   name: string;
-  cycle: string; // Nuevo: ej. "GM Cocina y Gastronomía"
-  grade: string; // Nuevo: ej. "2º Curso"
+  cycle: string; 
+  grade: string; 
   weeklyHours: number;
-  annualHours: number; // Nuevo: Horas totales marcadas por el estado
-  color?: string; // Nuevo: Color identificativo del módulo
+  annualHours: number; 
+  color?: string; 
   units: Unit[];
 }
 
@@ -40,13 +43,13 @@ export interface Evaluation {
 export interface LegendItem {
   id: string;
   label: string;
-  color: string; // Hex code or Tailwind class identifier
+  color: string; 
 }
 
 export interface CalendarEvent {
   id: string;
-  date: string; // YYYY-MM-DD
-  legendItemId: string; // Link to LegendItem
+  date: string; 
+  legendItemId: string; 
 }
 
 export interface ChatMessage {
@@ -73,26 +76,26 @@ export interface ClassLog {
 
 // --- Nuevo Tipo: Horario Semanal ---
 export interface ScheduleSlot {
-  dayOfWeek: number; // 1 = Lunes, 2 = Martes, ... 5 = Viernes
-  startTime: string; // "08:15"
-  endTime: string;   // "09:10"
+  dayOfWeek: number; 
+  startTime: string; 
+  endTime: string;   
   courseId: string;
   defaultHours: number;
-  label: string; // Para mostrar en la UI, ej: "1ª Hora" o "Bloque Mañana"
+  label: string; 
 }
 
 // --- Tipos de Configuración e Identidad ---
 export interface SchoolInfo {
   name: string;
-  logoUrl: string; // URL o Base64
-  academicYear: string; // "2025-2026"
-  department: string; // Nuevo: Departamento (editable)
+  logoUrl: string; 
+  academicYear: string; 
+  department: string; 
 }
 
 export interface TeacherInfo {
   name: string;
   role: string;
-  avatarUrl: string; // URL o Base64
+  avatarUrl: string; 
 }
 
 export interface BackupData {

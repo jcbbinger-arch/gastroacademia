@@ -24,7 +24,7 @@ const Dashboard: React.FC<DashboardProps> = ({ courses, evaluations }) => {
 
   const dataBar = courses.map(c => ({
     name: c.name.split(' ')[0], 
-    Planificadas: c.units.reduce((acc, u) => acc + u.hoursPlanned, 0),
+    Planificadas: c.units.reduce((acc, u) => acc + u.hoursPlannedTheory + u.hoursPlannedPractice, 0),
     Realizadas: c.units.reduce((acc, u) => acc + u.hoursRealized, 0),
   }));
 

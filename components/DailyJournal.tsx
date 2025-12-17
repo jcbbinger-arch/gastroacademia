@@ -296,11 +296,14 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-chef-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-400"
             >
               <option value="">-- {selectedCourse ? 'Selecciona Unidad' : 'Primero selecciona un módulo'} --</option>
-              {currentCourse?.units.map(unit => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.title} ({unit.hoursRealized}/{unit.hoursPlanned}h)
-                </option>
-              ))}
+              {currentCourse?.units.map(unit => {
+                const totalPlanned = unit.hoursPlannedTheory + unit.hoursPlannedPractice;
+                return (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.title} ({unit.hoursRealized}/{totalPlanned}h)
+                  </option>
+                );
+              })}
             </select>
           </div>
 

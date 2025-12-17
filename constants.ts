@@ -12,12 +12,12 @@ export const COURSES_DATA: Course[] = [
     annualHours: 350, 
     color: '#ea580c', // Orange-600
     units: [
-      { id: 'm1-u1', title: 'UD1: Organización de la Producción', description: 'Planificación y Mise en Place', hoursPlanned: 30, hoursRealized: 30, status: UnitStatus.COMPLETED, trimestres: [1] },
-      { id: 'm1-u2', title: 'UD2: Técnicas Culinarias Básicas', description: 'Cocción, asado, fritura', hoursPlanned: 50, hoursRealized: 45, status: UnitStatus.IN_PROGRESS, trimestres: [1, 2] },
-      { id: 'm1-u3', title: 'UD3: Fondos y Salsas', description: 'Elaboraciones base', hoursPlanned: 40, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
-      { id: 'm1-u4', title: 'UD4: Guarniciones y Elementos Decorativos', description: 'Acompañamientos', hoursPlanned: 30, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
-      { id: 'm1-u5', title: 'UD5: Pescados y Mariscos', description: 'Tratamiento de productos del mar', hoursPlanned: 60, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
-      { id: 'm1-u6', title: 'UD6: Carnes y Aves', description: 'Tratamiento de productos cárnicos', hoursPlanned: 60, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
+      { id: 'm1-u1', title: 'UD1: Organización de la Producción', description: 'Planificación y Mise en Place', hoursPlannedTheory: 10, hoursPlannedPractice: 20, hoursRealized: 30, status: UnitStatus.COMPLETED, trimestres: [1] },
+      { id: 'm1-u2', title: 'UD2: Técnicas Culinarias Básicas', description: 'Cocción, asado, fritura', hoursPlannedTheory: 15, hoursPlannedPractice: 35, hoursRealized: 45, status: UnitStatus.IN_PROGRESS, trimestres: [1, 2] },
+      { id: 'm1-u3', title: 'UD3: Fondos y Salsas', description: 'Elaboraciones base', hoursPlannedTheory: 10, hoursPlannedPractice: 30, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
+      { id: 'm1-u4', title: 'UD4: Guarniciones y Elementos Decorativos', description: 'Acompañamientos', hoursPlannedTheory: 5, hoursPlannedPractice: 25, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
+      { id: 'm1-u5', title: 'UD5: Pescados y Mariscos', description: 'Tratamiento de productos del mar', hoursPlannedTheory: 15, hoursPlannedPractice: 45, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
+      { id: 'm1-u6', title: 'UD6: Carnes y Aves', description: 'Tratamiento de productos cárnicos', hoursPlannedTheory: 15, hoursPlannedPractice: 45, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
     ]
   },
   {
@@ -29,9 +29,9 @@ export const COURSES_DATA: Course[] = [
     annualHours: 63,
     color: '#16a34a', // Green-600
     units: [
-      { id: 'm2-u1', title: 'UD1: Huella de Carbono', description: 'Impacto ambiental', hoursPlanned: 15, hoursRealized: 10, status: UnitStatus.IN_PROGRESS, trimestres: [1] },
-      { id: 'm2-u2', title: 'UD2: Gestión de Residuos', description: 'Zero Waste', hoursPlanned: 20, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
-      { id: 'm2-u3', title: 'UD3: Producto de Km 0', description: 'Proveedores locales', hoursPlanned: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
+      { id: 'm2-u1', title: 'UD1: Huella de Carbono', description: 'Impacto ambiental', hoursPlannedTheory: 10, hoursPlannedPractice: 5, hoursRealized: 10, status: UnitStatus.IN_PROGRESS, trimestres: [1] },
+      { id: 'm2-u2', title: 'UD2: Gestión de Residuos', description: 'Zero Waste', hoursPlannedTheory: 10, hoursPlannedPractice: 10, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
+      { id: 'm2-u3', title: 'UD3: Producto de Km 0', description: 'Proveedores locales', hoursPlannedTheory: 10, hoursPlannedPractice: 5, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
     ]
   },
   {
@@ -43,9 +43,9 @@ export const COURSES_DATA: Course[] = [
     annualHours: 33,
     color: '#4f46e5', // Indigo-600
     units: [
-      { id: 'm3-u1', title: 'UD1: Definición del Proyecto', description: 'Ideación', hoursPlanned: 5, hoursRealized: 5, status: UnitStatus.COMPLETED, trimestres: [1] },
-      { id: 'm3-u2', title: 'UD2: Planificación', description: 'Cronograma', hoursPlanned: 10, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
-      { id: 'm3-u3', title: 'UD3: Ejecución y Venta', description: 'Puesta en marcha', hoursPlanned: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
+      { id: 'm3-u1', title: 'UD1: Definición del Proyecto', description: 'Ideación', hoursPlannedTheory: 5, hoursPlannedPractice: 0, hoursRealized: 5, status: UnitStatus.COMPLETED, trimestres: [1] },
+      { id: 'm3-u2', title: 'UD2: Planificación', description: 'Cronograma', hoursPlannedTheory: 5, hoursPlannedPractice: 5, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
+      { id: 'm3-u3', title: 'UD3: Ejecución y Venta', description: 'Puesta en marcha', hoursPlannedTheory: 0, hoursPlannedPractice: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
     ]
   },
   {
@@ -58,7 +58,7 @@ export const COURSES_DATA: Course[] = [
     annualHours: 96,
     color: '#db2777', // Pink-600
     units: [
-      { id: 'm4-u1', title: 'UD1: Masas bases', description: 'Masas quebradas y batidas', hoursPlanned: 20, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [1] },
+      { id: 'm4-u1', title: 'UD1: Masas bases', description: 'Masas quebradas y batidas', hoursPlannedTheory: 5, hoursPlannedPractice: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [1] },
     ]
   }
 ];

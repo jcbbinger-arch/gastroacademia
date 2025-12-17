@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Course, Unit, UnitStatus } from '../types';
-import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, Check, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, Check, RefreshCw, ChefHat } from 'lucide-react';
 
 interface CourseConfiguratorProps {
   courses: Course[];
@@ -59,7 +59,8 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
       id: `u-${Date.now()}`,
       title: `UD${activeCourse.units.length + 1}: Título`,
       description: 'Descripción breve...',
-      hoursPlanned: 10,
+      hoursPlannedTheory: 5,
+      hoursPlannedPractice: 10,
       hoursRealized: 0,
       status: UnitStatus.PENDING,
       trimestres: [1]
@@ -108,7 +109,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
   };
 
   // Calculations
-  const totalPlannedHours = activeCourse?.units.reduce((acc, u) => acc + u.hoursPlanned, 0) || 0;
+  const totalPlannedHours = activeCourse?.units.reduce((acc, u) => acc + u.hoursPlannedTheory + u.hoursPlannedPractice, 0) || 0;
   const annualHours = activeCourse?.annualHours || 0;
   const hoursDiff = annualHours - totalPlannedHours;
   const progressPercent = annualHours > 0 ? (totalPlannedHours / annualHours) * 100 : 0;
@@ -304,7 +305,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                            />
                          </div>
                          {/* Description */}
-                         <div className="md:col-span-5">
+                         <div className="md:col-span-4">
                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Contenido / Descripción</label>
                            <input 
                              type="text" 
@@ -313,31 +314,45 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                              className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-chef-500"
                            />
                          </div>
-                         {/* Hours */}
-                         <div className="md:col-span-2">
-                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Horas</label>
+                         {/* Hours Theory */}
+                         <div className="md:col-span-1">
+                            <label className="block text-[10px] uppercase text-blue-600 font-bold mb-1 flex items-center gap-1">
+                                <BookOpen size={10}/> H.Teor
+                            </label>
                             <input 
                              type="number" 
-                             value={unit.hoursPlanned}
-                             onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlanned', Number(e.target.value))}
-                             className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-chef-500 text-center font-bold"
+                             value={unit.hoursPlannedTheory}
+                             onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedTheory', Number(e.target.value))}
+                             className="w-full p-2 text-sm border border-blue-200 bg-blue-50 rounded focus:ring-1 focus:ring-blue-500 text-center font-bold text-blue-700"
+                           />
+                         </div>
+                         {/* Hours Practice */}
+                         <div className="md:col-span-1">
+                            <label className="block text-[10px] uppercase text-orange-600 font-bold mb-1 flex items-center gap-1">
+                                <ChefHat size={10}/> H.Prác
+                            </label>
+                            <input 
+                             type="number" 
+                             value={unit.hoursPlannedPractice}
+                             onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedPractice', Number(e.target.value))}
+                             className="w-full p-2 text-sm border border-orange-200 bg-orange-50 rounded focus:ring-1 focus:ring-orange-500 text-center font-bold text-orange-700"
                            />
                          </div>
                          {/* Trimestre Multi-select */}
-                         <div className="md:col-span-1">
-                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Trim.</label>
-                            <div className="flex flex-col gap-1">
+                         <div className="md:col-span-2">
+                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Trimestres</label>
+                            <div className="flex gap-1">
                                 {[1, 2, 3].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => toggleTrimestre(unit.id, t)}
-                                        className={`flex items-center justify-center w-full p-1 rounded text-[10px] border transition-all ${
+                                        className={`flex-1 flex items-center justify-center p-1.5 rounded text-[10px] border transition-all ${
                                             unit.trimestres.includes(t)
                                             ? 'bg-chef-600 text-white border-chef-600'
                                             : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
                                         }`}
                                     >
-                                        {t}º {unit.trimestres.includes(t) && <Check size={8} className="ml-1"/>}
+                                        {t}º
                                     </button>
                                 ))}
                             </div>
