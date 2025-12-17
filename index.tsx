@@ -12,11 +12,13 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Explicitly declare state property for TypeScript
-  public state: ErrorBoundaryState = {
-    hasError: false,
-    error: null
-  };
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null
+    };
+  }
 
   public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
@@ -27,7 +29,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   public render() {
-    // Fix: Access state safely
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
@@ -35,7 +36,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             <h1 className="text-2xl font-black text-red-600 mb-4">¡Ups! Algo salió mal.</h1>
             <p className="text-gray-700 mb-4 font-medium">La aplicación ha encontrado un error crítico y no puede mostrarse.</p>
             <div className="bg-gray-900 text-white p-4 rounded-lg text-xs font-mono overflow-auto mb-6">
-              {/* Fix: Access error from state */}
               {this.state.error?.toString()}
             </div>
             <button 
@@ -49,7 +49,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       );
     }
 
-    // Fix: Access props inherited from Component
     return this.props.children;
   }
 }

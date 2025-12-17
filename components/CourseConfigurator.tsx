@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Course, Unit, UnitStatus, ResultadoAprendizaje, CriterioEvaluacion, AsociacionCriterio } from '../types';
-import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, RefreshCw, ChefHat, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, Layers } from 'lucide-react';
+import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, RefreshCw, ChefHat, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, Layers, PieChart } from 'lucide-react';
 
 interface CourseConfiguratorProps {
   courses: Course[];
@@ -257,25 +257,25 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
   };
 
 
-  // --- Calculations for Top Bar ---
-  const totalPlannedHours = activeCourse?.units.reduce((acc, u) => acc + u.hoursPlannedTheory + u.hoursPlannedPractice, 0) || 0;
+  // --- Calculations ---
+  const sumTheory = activeCourse?.units.reduce((acc, u) => acc + (u.hoursPlannedTheory || 0), 0) || 0;
+  const sumPractice = activeCourse?.units.reduce((acc, u) => acc + (u.hoursPlannedPractice || 0), 0) || 0;
+  const totalPlannedHours = sumTheory + sumPractice;
   const annualHours = activeCourse?.annualHours || 0;
   const hoursDiff = annualHours - totalPlannedHours;
-  const progressPercent = annualHours > 0 ? (totalPlannedHours / annualHours) * 100 : 0;
   
-  let statusColor = 'bg-blue-500';
-  let statusText = 'En progreso';
+  // Status Logic
+  let statusColor = 'text-gray-600';
+  let statusText = 'Cuadre Pendiente';
   if (totalPlannedHours > annualHours) {
-    statusColor = 'bg-red-500';
-    statusText = `Exceso: +${Math.abs(hoursDiff)}h`;
+    statusColor = 'text-red-500';
+    statusText = `Exceso (${Math.abs(hoursDiff)}h)`;
   } else if (totalPlannedHours === annualHours && annualHours > 0) {
-    statusColor = 'bg-green-500';
+    statusColor = 'text-green-600';
     statusText = 'Cuadre Perfecto';
   } else {
-    statusText = `Pendiente: ${hoursDiff}h`;
+    statusText = `Faltan asignar ${hoursDiff}h`;
   }
-
-  const INSTRUMENTS_OPTIONS = ['Examen Teórico', 'Práctica de Taller', 'Lista de Cotejo', 'Rúbrica', 'Observación Directa', 'Trabajo/Proyecto', 'Degustación'];
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-6 animate-fade-in pb-10">
@@ -334,39 +334,8 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                 </button>
               </div>
 
-              {/* Basic Inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                 <div className="md:col-span-2">
-                    <input 
-                      type="text" 
-                      value={activeCourse.name}
-                      onChange={(e) => updateGlobalCourse({...activeCourse, name: e.target.value})}
-                      className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 font-bold"
-                      placeholder="Nombre del Módulo"
-                    />
-                 </div>
-                 <div>
-                    <input 
-                        type="number" 
-                        value={activeCourse.annualHours}
-                        onChange={(e) => updateGlobalCourse({...activeCourse, annualHours: Number(e.target.value)})}
-                        className="w-full p-2 text-sm border-2 border-chef-200 rounded font-bold text-gray-800"
-                        placeholder="Horas Totales"
-                    />
-                 </div>
-                 <div className="flex flex-col justify-center">
-                       <div className="flex justify-between text-[10px] mb-1 font-medium">
-                         <span>{totalPlannedHours}/{annualHours} h</span>
-                         <span className={hoursDiff < 0 ? 'text-red-500' : 'text-gray-600'}>{statusText}</span>
-                       </div>
-                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div className={`h-full transition-all ${statusColor}`} style={{ width: `${Math.min(100, progressPercent)}%` }}></div>
-                       </div>
-                 </div>
-              </div>
-
               {/* TABS NAVIGATION */}
-              <div className="flex border-b border-gray-200">
+              <div className="flex border-b border-gray-200 mt-4">
                   <button 
                     onClick={() => setActiveTab('units')}
                     className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
@@ -392,9 +361,54 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
               {/* --- TAB 1: UNITS --- */}
               {activeTab === 'units' && (
                 <div className="space-y-4">
+                  
+                  {/* --- NEW SUMMARY BOX (THE RED BOX REPLACEMENT) --- */}
+                  <div className="bg-white p-5 rounded-xl border-2 border-gray-100 shadow-sm mb-6 flex flex-col md:flex-row gap-6 items-center justify-between">
+                      
+                      {/* 1. Input Total Hours */}
+                      <div className="flex-1 w-full md:w-auto">
+                           <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                               <Clock size={12}/> Horas Totales Módulo (BOE)
+                           </label>
+                           <input 
+                                type="number" 
+                                value={activeCourse.annualHours}
+                                onChange={(e) => updateGlobalCourse({...activeCourse, annualHours: Number(e.target.value)})}
+                                className="w-full p-2.5 text-lg border-2 border-gray-200 rounded-lg font-black text-gray-800 focus:border-chef-500 focus:ring-4 focus:ring-chef-100 outline-none transition-all"
+                                placeholder="0"
+                            />
+                      </div>
+
+                      {/* 2. Visual Breakdown */}
+                      <div className="flex gap-4 items-center flex-1 justify-center w-full">
+                          <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 text-center min-w-[100px]">
+                              <span className="block text-[10px] font-bold text-blue-500 uppercase mb-0.5"><BookOpen size={10} className="inline mr-1"/>Teoría</span>
+                              <span className="text-2xl font-black text-blue-700 leading-none">{sumTheory}<span className="text-sm font-medium text-blue-400">h</span></span>
+                          </div>
+                          <div className="text-gray-300 font-light text-2xl">+</div>
+                          <div className="bg-orange-50 px-4 py-2 rounded-lg border border-orange-100 text-center min-w-[100px]">
+                              <span className="block text-[10px] font-bold text-orange-500 uppercase mb-0.5"><ChefHat size={10} className="inline mr-1"/>Práctica</span>
+                              <span className="text-2xl font-black text-orange-700 leading-none">{sumPractice}<span className="text-sm font-medium text-orange-400">h</span></span>
+                          </div>
+                      </div>
+
+                      {/* 3. Balance Status */}
+                      <div className="flex-1 w-full text-right border-l-2 border-gray-100 pl-6">
+                           <p className="text-[10px] font-bold text-gray-400 uppercase">Total Asignado</p>
+                           <div className="flex items-baseline justify-end gap-1">
+                               <span className={`text-3xl font-black ${totalPlannedHours > annualHours ? 'text-red-500' : 'text-gray-800'}`}>
+                                   {totalPlannedHours}
+                               </span>
+                               <span className="text-sm text-gray-400 font-medium">/ {annualHours} h</span>
+                           </div>
+                           <p className={`text-xs font-bold mt-1 ${statusColor}`}>{statusText}</p>
+                      </div>
+                  </div>
+                  {/* --- END SUMMARY BOX --- */}
+
                   <div className="flex justify-between items-center mb-2">
-                    <p className="text-xs text-gray-500 font-medium">Define los contenidos y distribuye las horas.</p>
-                    <button onClick={handleAddUnit} className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition flex items-center gap-1 shadow-sm">
+                    <p className="text-xs text-gray-500 font-medium italic">Distribuye las horas entre las unidades abajo.</p>
+                    <button onClick={handleAddUnit} className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition flex items-center gap-1 shadow-sm font-bold">
                       <Plus size={16} /> Nueva UT
                     </button>
                   </div>
@@ -409,7 +423,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                              type="text" 
                              value={unit.title}
                              onChange={(e) => handleUpdateUnit(unit.id, 'title', e.target.value)}
-                             className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-chef-500"
+                             className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-chef-500 font-bold text-gray-700"
                            />
                          </div>
                          {/* Description */}
@@ -429,7 +443,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                              type="number" 
                              value={unit.hoursPlannedTheory}
                              onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedTheory', Number(e.target.value))}
-                             className="w-full p-2 text-sm border border-blue-200 bg-blue-50 rounded text-center font-bold text-blue-700"
+                             className="w-full p-2 text-sm border border-blue-200 bg-blue-50 rounded text-center font-bold text-blue-700 focus:ring-2 focus:ring-blue-200 outline-none"
                            />
                          </div>
                          {/* Hours Practice */}
@@ -439,7 +453,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                              type="number" 
                              value={unit.hoursPlannedPractice}
                              onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedPractice', Number(e.target.value))}
-                             className="w-full p-2 text-sm border border-orange-200 bg-orange-50 rounded text-center font-bold text-orange-700"
+                             className="w-full p-2 text-sm border border-orange-200 bg-orange-50 rounded text-center font-bold text-orange-700 focus:ring-2 focus:ring-orange-200 outline-none"
                            />
                          </div>
                          {/* Trimestres */}
@@ -450,7 +464,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                                     <button
                                         key={t}
                                         onClick={() => toggleTrimestre(unit.id, t)}
-                                        className={`flex-1 flex items-center justify-center p-1.5 rounded text-[10px] border ${unit.trimestres.includes(t) ? 'bg-chef-600 text-white border-chef-600' : 'bg-white text-gray-500'}`}
+                                        className={`flex-1 flex items-center justify-center p-1.5 rounded text-[10px] border font-bold transition-all ${unit.trimestres.includes(t) ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'}`}
                                     >
                                         {t}
                                     </button>
@@ -458,7 +472,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                             </div>
                          </div>
                       </div>
-                      <button onClick={() => handleDeleteUnit(unit.id)} className="text-gray-400 hover:text-red-500 self-center p-2"><Trash2 size={18} /></button>
+                      <button onClick={() => handleDeleteUnit(unit.id)} className="text-gray-300 hover:text-red-500 self-center p-2"><Trash2 size={18} /></button>
                    </div>
                   ))}
                   {activeCourse.units.length === 0 && <div className="text-center py-8 text-gray-400 italic">No hay unidades definidas.</div>}
