@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Course, Unit, UnitStatus } from '../types';
-import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, Check, RefreshCw, ChefHat } from 'lucide-react';
+import { Course, Unit, UnitStatus, ResultadoAprendizaje, CriterioEvaluacion, AsociacionCriterio } from '../types';
+import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, RefreshCw, ChefHat, GraduationCap, ChevronDown, ChevronRight, Link as LinkIcon, Layers } from 'lucide-react';
 
 interface CourseConfiguratorProps {
   courses: Course[];
@@ -9,6 +9,9 @@ interface CourseConfiguratorProps {
 
 const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpdateCourses }) => {
   const [activeCourseId, setActiveCourseId] = useState<string>(courses[0]?.id || '');
+  const [activeTab, setActiveTab] = useState<'units' | 'ras'>('units');
+  const [expandedRaIds, setExpandedRaIds] = useState<string[]>([]);
+  const [expandedCriterionIds, setExpandedCriterionIds] = useState<string[]>([]);
 
   // Derived state: Always get the truth from the props
   const activeCourse = courses.find(c => c.id === activeCourseId);
@@ -22,7 +25,10 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
 
   const handleSelectCourse = (id: string) => {
     setActiveCourseId(id);
+    setExpandedRaIds([]); // Reset expansions
   };
+
+  // --- GENERAL COURSE MANAGEMENT ---
 
   const handleAddNewCourse = () => {
     const newCourse: Course = {
@@ -33,7 +39,8 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
       weeklyHours: 0,
       annualHours: 0,
       color: '#a18072',
-      units: []
+      units: [],
+      learningResults: []
     };
     onUpdateCourses([...courses, newCourse]);
     setActiveCourseId(newCourse.id);
@@ -51,7 +58,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
     }
   };
 
-  // --- Units Management ---
+  // --- UNITS MANAGEMENT (Existing Logic) ---
 
   const handleAddUnit = () => {
     if (!activeCourse) return;
@@ -87,7 +94,6 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
 
     let newTrims = [...unit.trimestres];
     if (newTrims.includes(trim)) {
-        // Prevent removing the last trimester (must have at least one)
         if (newTrims.length > 1) {
             newTrims = newTrims.filter(t => t !== trim);
         }
@@ -108,7 +114,150 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
     updateGlobalCourse(updatedCourse);
   };
 
-  // Calculations
+  // --- LEARNING RESULTS (RA) MANAGEMENT (New Logic) ---
+
+  const toggleRaExpansion = (raId: string) => {
+    setExpandedRaIds(prev => prev.includes(raId) ? prev.filter(id => id !== raId) : [...prev, raId]);
+  };
+  
+  const toggleCriterionExpansion = (critId: string) => {
+    setExpandedCriterionIds(prev => prev.includes(critId) ? prev.filter(id => id !== critId) : [...prev, critId]);
+  };
+
+  const handleAddRa = () => {
+    if (!activeCourse) return;
+    const newRa: ResultadoAprendizaje = {
+      id: `ra-${Date.now()}`,
+      codigo: `RA${(activeCourse.learningResults?.length || 0) + 1}`,
+      descripcion: 'Nuevo Resultado de Aprendizaje...',
+      ponderacion: 0,
+      criterios: []
+    };
+    updateGlobalCourse({
+      ...activeCourse,
+      learningResults: [...(activeCourse.learningResults || []), newRa]
+    });
+    setExpandedRaIds(prev => [...prev, newRa.id]);
+  };
+
+  const handleUpdateRa = (raId: string, field: keyof ResultadoAprendizaje, value: any) => {
+    if (!activeCourse) return;
+    const updatedRas = activeCourse.learningResults.map(ra => 
+      ra.id === raId ? { ...ra, [field]: value } : ra
+    );
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+  const handleDeleteRa = (raId: string) => {
+    if (!activeCourse) return;
+    updateGlobalCourse({
+      ...activeCourse,
+      learningResults: activeCourse.learningResults.filter(ra => ra.id !== raId)
+    });
+  };
+
+  // --- CRITERIA MANAGEMENT ---
+
+  const handleAddCriterion = (raId: string) => {
+    if (!activeCourse) return;
+    const ra = activeCourse.learningResults.find(r => r.id === raId);
+    if (!ra) return;
+
+    const newCriterion: CriterioEvaluacion = {
+      id: `ce-${Date.now()}`,
+      codigo: `${ra.codigo.replace('RA','').trim()}.${String.fromCharCode(97 + ra.criterios.length)}`, // 1.a, 1.b auto-naming
+      descripcion: 'Descripción del criterio...',
+      ponderacion: 0,
+      raId: raId,
+      asociaciones: []
+    };
+
+    const updatedRas = activeCourse.learningResults.map(r => 
+      r.id === raId ? { ...r, criterios: [...r.criterios, newCriterion] } : r
+    );
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+    setExpandedCriterionIds(prev => [...prev, newCriterion.id]);
+  };
+
+  const handleUpdateCriterion = (raId: string, critId: string, field: keyof CriterioEvaluacion, value: any) => {
+    if (!activeCourse) return;
+    const updatedRas = activeCourse.learningResults.map(ra => {
+        if (ra.id !== raId) return ra;
+        return {
+            ...ra,
+            criterios: ra.criterios.map(c => c.id === critId ? { ...c, [field]: value } : c)
+        };
+    });
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+  const handleDeleteCriterion = (raId: string, critId: string) => {
+    if (!activeCourse) return;
+    const updatedRas = activeCourse.learningResults.map(ra => {
+        if (ra.id !== raId) return ra;
+        return { ...ra, criterios: ra.criterios.filter(c => c.id !== critId) };
+    });
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+  // --- ASSOCIATION (The Bridge) MANAGEMENT ---
+
+  const handleAddAssociation = (raId: string, critId: string) => {
+    if (!activeCourse) return;
+    const newAssoc: AsociacionCriterio = {
+        id: `assoc-${Date.now()}`,
+        utId: activeCourse.units[0]?.id || '', // Default to first unit
+        instruments: []
+    };
+
+    const updatedRas = activeCourse.learningResults.map(ra => {
+        if (ra.id !== raId) return ra;
+        return {
+            ...ra,
+            criterios: ra.criterios.map(c => {
+                if (c.id !== critId) return c;
+                return { ...c, asociaciones: [...c.asociaciones, newAssoc] };
+            })
+        };
+    });
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+  const handleUpdateAssociation = (raId: string, critId: string, assocId: string, field: keyof AsociacionCriterio, value: any) => {
+    if (!activeCourse) return;
+    const updatedRas = activeCourse.learningResults.map(ra => {
+        if (ra.id !== raId) return ra;
+        return {
+            ...ra,
+            criterios: ra.criterios.map(c => {
+                if (c.id !== critId) return c;
+                return {
+                    ...c,
+                    asociaciones: c.asociaciones.map(a => a.id === assocId ? { ...a, [field]: value } : a)
+                };
+            })
+        };
+    });
+    updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+  const handleDeleteAssociation = (raId: string, critId: string, assocId: string) => {
+     if (!activeCourse) return;
+     const updatedRas = activeCourse.learningResults.map(ra => {
+         if (ra.id !== raId) return ra;
+         return {
+             ...ra,
+             criterios: ra.criterios.map(c => {
+                 if (c.id !== critId) return c;
+                 return { ...c, asociaciones: c.asociaciones.filter(a => a.id !== assocId) };
+             })
+         };
+     });
+     updateGlobalCourse({ ...activeCourse, learningResults: updatedRas });
+  };
+
+
+  // --- Calculations for Top Bar ---
   const totalPlannedHours = activeCourse?.units.reduce((acc, u) => acc + u.hoursPlannedTheory + u.hoursPlannedPractice, 0) || 0;
   const annualHours = activeCourse?.annualHours || 0;
   const hoursDiff = annualHours - totalPlannedHours;
@@ -116,7 +265,6 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
   
   let statusColor = 'bg-blue-500';
   let statusText = 'En progreso';
-  
   if (totalPlannedHours > annualHours) {
     statusColor = 'bg-red-500';
     statusText = `Exceso: +${Math.abs(hoursDiff)}h`;
@@ -124,8 +272,10 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
     statusColor = 'bg-green-500';
     statusText = 'Cuadre Perfecto';
   } else {
-    statusText = `Pendiente de asignar: ${hoursDiff}h`;
+    statusText = `Pendiente: ${hoursDiff}h`;
   }
+
+  const INSTRUMENTS_OPTIONS = ['Examen Teórico', 'Práctica de Taller', 'Lista de Cotejo', 'Rúbrica', 'Observación Directa', 'Trabajo/Proyecto', 'Degustación'];
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-6 animate-fade-in pb-10">
@@ -155,11 +305,6 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
               </div>
             </div>
           ))}
-          {courses.length === 0 && (
-            <div className="p-4 text-center text-gray-400 text-sm">
-              No hay módulos configurados. Añade uno.
-            </div>
-          )}
         </div>
       </div>
 
@@ -168,131 +313,94 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
         {activeCourse ? (
           <>
             <div className="p-6 border-b border-gray-100 bg-white flex-shrink-0">
-              <div className="flex justify-between items-start mb-6">
+               {/* Header & Meta Data */}
+               <div className="flex justify-between items-start mb-6">
                 <div>
                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                      <Settings size={20} className="text-gray-400" />
-                     Configuración del Módulo
+                     {activeCourse.name}
                    </h2>
                    <p className="text-xs text-green-600 font-bold flex items-center gap-1 mt-1">
                      <RefreshCw size={12} className="animate-spin-slow" />
-                     Guardado automático activado
+                     Auto-guardado activo
                    </p>
                 </div>
-                <div className="flex gap-2">
-                   <button 
+                <button 
                      onClick={() => handleDeleteCourse(activeCourse.id)}
-                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition border border-transparent hover:border-red-100"
+                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
                      title="Borrar Módulo"
                    >
                      <Trash2 size={20} />
-                   </button>
-                </div>
+                </button>
               </div>
 
-              {/* General Data Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+              {/* Basic Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Módulo</label>
                     <input 
                       type="text" 
                       value={activeCourse.name}
                       onChange={(e) => updateGlobalCourse({...activeCourse, name: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none transition-shadow"
+                      className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 font-bold"
+                      placeholder="Nombre del Módulo"
                     />
                  </div>
                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Ciclo Formativo</label>
                     <input 
-                      type="text" 
-                      value={activeCourse.cycle}
-                      onChange={(e) => updateGlobalCourse({...activeCourse, cycle: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none transition-shadow"
-                      placeholder="Ej: GM Cocina"
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Curso</label>
-                    <select
-                      value={activeCourse.grade}
-                      onChange={(e) => updateGlobalCourse({...activeCourse, grade: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none bg-white transition-shadow"
-                    >
-                       <option value="1º Curso">1º Curso</option>
-                       <option value="2º Curso">2º Curso</option>
-                       <option value="FP Básica">FP Básica</option>
-                       <option value="Curso Espec.">Curso Espec.</option>
-                    </select>
-                 </div>
-                 
-                 {/* Hours Section - Specific State Validation */}
-                 <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-gray-200 mt-2">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Semanales (Horario)</label>
-                      <div className="relative">
-                        <input 
-                          type="number" 
-                          value={activeCourse.weeklyHours}
-                          onChange={(e) => updateGlobalCourse({...activeCourse, weeklyHours: Number(e.target.value)})}
-                          className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none pl-8 transition-shadow"
-                        />
-                        <Clock size={14} className="absolute top-3 left-2.5 text-gray-400" />
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1">Usado para la rejilla semanal.</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-800 uppercase mb-1 flex items-center gap-1">
-                        Horas Totales (Estado/BOE) <AlertCircle size={12} className="text-chef-600"/>
-                      </label>
-                      <input 
                         type="number" 
                         value={activeCourse.annualHours}
                         onChange={(e) => updateGlobalCourse({...activeCourse, annualHours: Number(e.target.value)})}
-                        className="w-full p-2 border-2 border-chef-200 rounded focus:ring-2 focus:ring-chef-500 outline-none font-bold text-gray-800 transition-shadow"
-                        placeholder="Ej: 350"
-                      />
-                      <p className="text-[10px] text-gray-400 mt-1">Cifra oficial que debe cuadrar.</p>
-                    </div>
-
-                    <div className="flex flex-col justify-center">
-                       <div className="flex justify-between text-xs mb-1 font-medium">
-                         <span>Asignadas: {totalPlannedHours}h</span>
-                         <span className={hoursDiff < 0 ? 'text-red-500' : 'text-gray-600'}>
-                            {statusText}
-                         </span>
-                       </div>
-                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div 
-                             className={`h-full transition-all duration-500 ${statusColor}`}
-                             style={{ width: `${Math.min(100, progressPercent)}%` }}
-                          ></div>
-                       </div>
-                       {hoursDiff < 0 && (
-                         <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ Has superado las horas oficiales.</p>
-                       )}
-                    </div>
+                        className="w-full p-2 text-sm border-2 border-chef-200 rounded font-bold text-gray-800"
+                        placeholder="Horas Totales"
+                    />
                  </div>
+                 <div className="flex flex-col justify-center">
+                       <div className="flex justify-between text-[10px] mb-1 font-medium">
+                         <span>{totalPlannedHours}/{annualHours} h</span>
+                         <span className={hoursDiff < 0 ? 'text-red-500' : 'text-gray-600'}>{statusText}</span>
+                       </div>
+                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div className={`h-full transition-all ${statusColor}`} style={{ width: `${Math.min(100, progressPercent)}%` }}></div>
+                       </div>
+                 </div>
+              </div>
+
+              {/* TABS NAVIGATION */}
+              <div className="flex border-b border-gray-200">
+                  <button 
+                    onClick={() => setActiveTab('units')}
+                    className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+                        activeTab === 'units' ? 'border-chef-600 text-chef-800' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <Layers size={16} /> Unidades de Trabajo (UT)
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('ras')}
+                    className={`px-4 py-2 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${
+                        activeTab === 'ras' ? 'border-chef-600 text-chef-800' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <GraduationCap size={16} /> Evaluación (RA / Criterios)
+                  </button>
               </div>
             </div>
 
-            {/* Units Management */}
-            <div className="flex-1 overflow-y-auto p-6 bg-white">
-              <div className="flex justify-between items-center mb-4">
-                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                   <BookOpen size={18} /> Programación de Unidades Didácticas
-                 </h3>
-                 <button 
-                   onClick={handleAddUnit}
-                   className="text-sm bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-medium transition flex items-center gap-1"
-                 >
-                   <Plus size={16} /> Nueva Unidad
-                 </button>
-              </div>
-
-              <div className="space-y-3 pb-8">
-                 {activeCourse.units.map((unit) => (
-                   <div key={unit.id} className="flex flex-col md:flex-row gap-3 p-4 border border-gray-200 rounded-lg hover:border-chef-300 transition-colors bg-gray-50/50">
+            {/* CONTENT AREA */}
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+              
+              {/* --- TAB 1: UNITS --- */}
+              {activeTab === 'units' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-xs text-gray-500 font-medium">Define los contenidos y distribuye las horas.</p>
+                    <button onClick={handleAddUnit} className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition flex items-center gap-1 shadow-sm">
+                      <Plus size={16} /> Nueva UT
+                    </button>
+                  </div>
+                  
+                  {activeCourse.units.map((unit) => (
+                   <div key={unit.id} className="flex flex-col md:flex-row gap-3 p-4 border border-gray-200 rounded-lg hover:border-chef-300 transition-colors bg-white shadow-sm">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                          {/* Title */}
                          <div className="md:col-span-4">
@@ -306,7 +414,7 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                          </div>
                          {/* Description */}
                          <div className="md:col-span-4">
-                           <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Contenido / Descripción</label>
+                           <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Contenido</label>
                            <input 
                              type="text" 
                              value={unit.description}
@@ -316,63 +424,183 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                          </div>
                          {/* Hours Theory */}
                          <div className="md:col-span-1">
-                            <label className="block text-[10px] uppercase text-blue-600 font-bold mb-1 flex items-center gap-1">
-                                <BookOpen size={10}/> H.Teor
-                            </label>
+                            <label className="block text-[10px] uppercase text-blue-600 font-bold mb-1 flex items-center gap-1"><BookOpen size={10}/> Teor</label>
                             <input 
                              type="number" 
                              value={unit.hoursPlannedTheory}
                              onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedTheory', Number(e.target.value))}
-                             className="w-full p-2 text-sm border border-blue-200 bg-blue-50 rounded focus:ring-1 focus:ring-blue-500 text-center font-bold text-blue-700"
+                             className="w-full p-2 text-sm border border-blue-200 bg-blue-50 rounded text-center font-bold text-blue-700"
                            />
                          </div>
                          {/* Hours Practice */}
                          <div className="md:col-span-1">
-                            <label className="block text-[10px] uppercase text-orange-600 font-bold mb-1 flex items-center gap-1">
-                                <ChefHat size={10}/> H.Prác
-                            </label>
+                            <label className="block text-[10px] uppercase text-orange-600 font-bold mb-1 flex items-center gap-1"><ChefHat size={10}/> Prác</label>
                             <input 
                              type="number" 
                              value={unit.hoursPlannedPractice}
                              onChange={(e) => handleUpdateUnit(unit.id, 'hoursPlannedPractice', Number(e.target.value))}
-                             className="w-full p-2 text-sm border border-orange-200 bg-orange-50 rounded focus:ring-1 focus:ring-orange-500 text-center font-bold text-orange-700"
+                             className="w-full p-2 text-sm border border-orange-200 bg-orange-50 rounded text-center font-bold text-orange-700"
                            />
                          </div>
-                         {/* Trimestre Multi-select */}
+                         {/* Trimestres */}
                          <div className="md:col-span-2">
-                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Trimestres</label>
+                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Trim</label>
                             <div className="flex gap-1">
                                 {[1, 2, 3].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => toggleTrimestre(unit.id, t)}
-                                        className={`flex-1 flex items-center justify-center p-1.5 rounded text-[10px] border transition-all ${
-                                            unit.trimestres.includes(t)
-                                            ? 'bg-chef-600 text-white border-chef-600'
-                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
-                                        }`}
+                                        className={`flex-1 flex items-center justify-center p-1.5 rounded text-[10px] border ${unit.trimestres.includes(t) ? 'bg-chef-600 text-white border-chef-600' : 'bg-white text-gray-500'}`}
                                     >
-                                        {t}º
+                                        {t}
                                     </button>
                                 ))}
                             </div>
                          </div>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteUnit(unit.id)}
-                        className="text-gray-400 hover:text-red-500 self-center p-2"
-                        title="Eliminar Unidad"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <button onClick={() => handleDeleteUnit(unit.id)} className="text-gray-400 hover:text-red-500 self-center p-2"><Trash2 size={18} /></button>
                    </div>
-                 ))}
-                 {activeCourse.units.length === 0 && (
-                   <div className="text-center py-8 text-gray-400 italic bg-gray-50 border border-dashed border-gray-200 rounded-lg">
-                     No hay unidades definidas. Comienza añadiendo la primera.
-                   </div>
-                 )}
-              </div>
+                  ))}
+                  {activeCourse.units.length === 0 && <div className="text-center py-8 text-gray-400 italic">No hay unidades definidas.</div>}
+                </div>
+              )}
+
+              {/* --- TAB 2: LEARNING RESULTS (RA) --- */}
+              {activeTab === 'ras' && (
+                  <div className="space-y-6">
+                     <div className="flex justify-between items-center mb-2">
+                        <p className="text-xs text-gray-500 font-medium">Define los RA, Criterios y vincúlalos a las UTs.</p>
+                        <button onClick={handleAddRa} className="text-sm bg-chef-600 text-white px-3 py-1.5 rounded hover:bg-chef-700 transition flex items-center gap-1 shadow-sm">
+                          <Plus size={16} /> Nuevo RA
+                        </button>
+                      </div>
+
+                      {(!activeCourse.learningResults || activeCourse.learningResults.length === 0) && (
+                          <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg">
+                              <GraduationCap className="mx-auto text-gray-300 mb-2" size={32} />
+                              <p className="text-gray-400 text-sm">No hay Resultados de Aprendizaje definidos.</p>
+                          </div>
+                      )}
+
+                      {activeCourse.learningResults?.map(ra => (
+                          <div key={ra.id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                              {/* RA Header */}
+                              <div className="bg-gray-50 p-3 flex items-center gap-3 border-b border-gray-200">
+                                  <button onClick={() => toggleRaExpansion(ra.id)} className="text-gray-500 hover:text-chef-600">
+                                      {expandedRaIds.includes(ra.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                  </button>
+                                  <input 
+                                    type="text" 
+                                    value={ra.codigo} 
+                                    onChange={(e) => handleUpdateRa(ra.id, 'codigo', e.target.value)}
+                                    className="w-16 font-black text-chef-800 bg-transparent border-b border-transparent focus:border-chef-500 outline-none" 
+                                  />
+                                  <input 
+                                    type="text" 
+                                    value={ra.descripcion} 
+                                    onChange={(e) => handleUpdateRa(ra.id, 'descripcion', e.target.value)}
+                                    className="flex-1 font-medium text-gray-800 bg-transparent border-b border-transparent focus:border-chef-500 outline-none" 
+                                  />
+                                  <div className="flex items-center gap-1 bg-white border border-gray-200 rounded px-2 py-1">
+                                      <span className="text-xs font-bold text-gray-500">% RA:</span>
+                                      <input 
+                                        type="number" 
+                                        value={ra.ponderacion} 
+                                        onChange={(e) => handleUpdateRa(ra.id, 'ponderacion', Number(e.target.value))}
+                                        className="w-10 text-xs font-bold text-center outline-none" 
+                                      />
+                                  </div>
+                                  <button onClick={() => handleDeleteRa(ra.id)} className="text-gray-400 hover:text-red-500"><Trash2 size={16}/></button>
+                              </div>
+
+                              {/* RA Content (Criteria) */}
+                              {expandedRaIds.includes(ra.id) && (
+                                  <div className="p-4 bg-gray-50/30 space-y-4">
+                                      <div className="flex justify-between items-center">
+                                          <h4 className="text-xs font-bold uppercase text-gray-400">Criterios de Evaluación</h4>
+                                          <button onClick={() => handleAddCriterion(ra.id)} className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 font-bold">
+                                              <Plus size={14}/> Añadir Criterio
+                                          </button>
+                                      </div>
+                                      
+                                      {ra.criterios.map(crit => (
+                                          <div key={crit.id} className="ml-4 pl-4 border-l-2 border-gray-200 space-y-2">
+                                              {/* Criterion Row */}
+                                              <div className="flex gap-3 items-start">
+                                                  <button onClick={() => toggleCriterionExpansion(crit.id)} className="mt-1 text-gray-400 hover:text-blue-600">
+                                                      {expandedCriterionIds.includes(crit.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                                  </button>
+                                                  <input 
+                                                    type="text" 
+                                                    value={crit.codigo} 
+                                                    onChange={(e) => handleUpdateCriterion(ra.id, crit.id, 'codigo', e.target.value)}
+                                                    className="w-12 text-sm font-bold text-gray-600 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none" 
+                                                  />
+                                                  <input 
+                                                    type="text" 
+                                                    value={crit.descripcion} 
+                                                    onChange={(e) => handleUpdateCriterion(ra.id, crit.id, 'descripcion', e.target.value)}
+                                                    className="flex-1 text-sm text-gray-700 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none" 
+                                                  />
+                                                  <input 
+                                                    type="number" 
+                                                    value={crit.ponderacion} 
+                                                    onChange={(e) => handleUpdateCriterion(ra.id, crit.id, 'ponderacion', Number(e.target.value))}
+                                                    className="w-12 text-sm text-center border-b border-gray-300 focus:border-blue-500 outline-none"
+                                                    placeholder="%" 
+                                                  />
+                                                  <button onClick={() => handleDeleteCriterion(ra.id, crit.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={14}/></button>
+                                              </div>
+
+                                              {/* Associations (The Bridge) */}
+                                              {expandedCriterionIds.includes(crit.id) && (
+                                                  <div className="mt-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                                      <div className="flex justify-between items-center mb-2">
+                                                          <span className="text-[10px] font-bold text-blue-600 uppercase flex items-center gap-1">
+                                                              <LinkIcon size={10} /> Vinculación con Unidades (UT)
+                                                          </span>
+                                                          <button onClick={() => handleAddAssociation(ra.id, crit.id)} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded hover:bg-blue-200 font-bold">
+                                                              + Vincular
+                                                          </button>
+                                                      </div>
+                                                      
+                                                      {crit.asociaciones.length === 0 && <p className="text-xs text-gray-400 italic">Este criterio aún no se evalúa en ninguna UT.</p>}
+
+                                                      {crit.asociaciones.map(assoc => (
+                                                          <div key={assoc.id} className="flex gap-2 mb-2 items-center">
+                                                              <select 
+                                                                value={assoc.utId} 
+                                                                onChange={(e) => handleUpdateAssociation(ra.id, crit.id, assoc.id, 'utId', e.target.value)}
+                                                                className="flex-1 text-xs p-1.5 border border-gray-300 rounded bg-white"
+                                                              >
+                                                                  <option value="">Seleccionar UT...</option>
+                                                                  {activeCourse.units.map(u => (
+                                                                      <option key={u.id} value={u.id}>{u.title}</option>
+                                                                  ))}
+                                                              </select>
+                                                              <div className="flex-1">
+                                                                 {/* Simple Multi-select simulation using native select multiple or just text for now to keep it simple as requested */}
+                                                                 <input 
+                                                                    type="text" 
+                                                                    placeholder="Instrumentos (sep. por comas)"
+                                                                    value={assoc.instruments.join(', ')}
+                                                                    onChange={(e) => handleUpdateAssociation(ra.id, crit.id, assoc.id, 'instruments', e.target.value.split(',').map(s => s.trim()))}
+                                                                    className="w-full text-xs p-1.5 border border-gray-300 rounded"
+                                                                 />
+                                                              </div>
+                                                              <button onClick={() => handleDeleteAssociation(ra.id, crit.id, assoc.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
+                                                          </div>
+                                                      ))}
+                                                  </div>
+                                              )}
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+                          </div>
+                      ))}
+                  </div>
+              )}
             </div>
           </>
         ) : (

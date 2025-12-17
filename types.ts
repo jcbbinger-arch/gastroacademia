@@ -6,6 +6,31 @@ export enum UnitStatus {
   DELAYED = 'Retrasado'
 }
 
+// --- Estructura Jerárquica de Evaluación (LOMLOE/FP) ---
+
+export interface AsociacionCriterio {
+  id: string;
+  utId: string; // El "Pegamento": Vincula con la Unidad de Trabajo (Unit)
+  instruments: string[]; // Ej: ['Examen', 'Práctica', 'Rúbrica']
+}
+
+export interface CriterioEvaluacion {
+  id: string;
+  codigo: string; // Ej: "1.a"
+  descripcion: string;
+  ponderacion: number; // Peso del Criterio dentro del RA (0-100%)
+  raId: string; // Referencia al padre
+  asociaciones: AsociacionCriterio[]; // Lista de vínculos con UTs
+}
+
+export interface ResultadoAprendizaje {
+  id: string;
+  codigo: string; // Ej: "RA1"
+  descripcion: string; // Ej: "Organiza procesos de producción..."
+  ponderacion: number; // Peso del RA en el total del módulo (0-100%)
+  criterios: CriterioEvaluacion[];
+}
+
 export interface Unit {
   id: string;
   title: string;
@@ -27,7 +52,8 @@ export interface Course {
   weeklyHours: number;
   annualHours: number; 
   color?: string; 
-  units: Unit[];
+  units: Unit[]; // Estas son las "Unidades de Trabajo" (UT)
+  learningResults: ResultadoAprendizaje[]; // Nueva estructura de evaluación
 }
 
 export interface Evaluation {

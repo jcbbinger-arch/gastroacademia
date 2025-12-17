@@ -18,6 +18,65 @@ export const COURSES_DATA: Course[] = [
       { id: 'm1-u4', title: 'UD4: Guarniciones y Elementos Decorativos', description: 'Acompañamientos', hoursPlannedTheory: 5, hoursPlannedPractice: 25, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
       { id: 'm1-u5', title: 'UD5: Pescados y Mariscos', description: 'Tratamiento de productos del mar', hoursPlannedTheory: 15, hoursPlannedPractice: 45, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
       { id: 'm1-u6', title: 'UD6: Carnes y Aves', description: 'Tratamiento de productos cárnicos', hoursPlannedTheory: 15, hoursPlannedPractice: 45, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
+    ],
+    learningResults: [
+      {
+        id: 'ra1',
+        codigo: 'RA1',
+        descripcion: 'Organiza los procesos de producción culinaria, analizando la ficha técnica.',
+        ponderacion: 15,
+        criterios: [
+          {
+            id: 'ce1a',
+            codigo: '1.a',
+            descripcion: 'Se han caracterizado los distintos modelos de producción.',
+            ponderacion: 40,
+            raId: 'ra1',
+            asociaciones: [
+              { id: 'asoc-1', utId: 'm1-u1', instruments: ['Examen Teórico'] }
+            ]
+          },
+          {
+            id: 'ce1b',
+            codigo: '1.b',
+            descripcion: 'Se han determinado las fases de la producción.',
+            ponderacion: 60,
+            raId: 'ra1',
+            asociaciones: [
+              { id: 'asoc-2', utId: 'm1-u1', instruments: ['Práctica de Taller', 'Lista de Cotejo'] }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'ra2',
+        codigo: 'RA2',
+        descripcion: 'Aplica técnicas culinarias básicas para elaboraciones elementales.',
+        ponderacion: 25,
+        criterios: [
+          {
+            id: 'ce2a',
+            codigo: '2.a',
+            descripcion: 'Se han seleccionado los útiles y herramientas.',
+            ponderacion: 30,
+            raId: 'ra2',
+            asociaciones: [
+              { id: 'asoc-3', utId: 'm1-u2', instruments: ['Observación Directa'] }
+            ]
+          },
+          {
+            id: 'ce2b',
+            codigo: '2.b',
+            descripcion: 'Se han ejecutado las operaciones de cocción según ficha técnica.',
+            ponderacion: 70,
+            raId: 'ra2',
+            asociaciones: [
+              { id: 'asoc-4', utId: 'm1-u2', instruments: ['Práctica de Taller', 'Degustación'] },
+              { id: 'asoc-5', utId: 'm1-u3', instruments: ['Práctica de Taller'] } // Este criterio TAMBIÉN se ve en la UD3 (Fondos)
+            ]
+          }
+        ]
+      }
     ]
   },
   {
@@ -32,7 +91,8 @@ export const COURSES_DATA: Course[] = [
       { id: 'm2-u1', title: 'UD1: Huella de Carbono', description: 'Impacto ambiental', hoursPlannedTheory: 10, hoursPlannedPractice: 5, hoursRealized: 10, status: UnitStatus.IN_PROGRESS, trimestres: [1] },
       { id: 'm2-u2', title: 'UD2: Gestión de Residuos', description: 'Zero Waste', hoursPlannedTheory: 10, hoursPlannedPractice: 10, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
       { id: 'm2-u3', title: 'UD3: Producto de Km 0', description: 'Proveedores locales', hoursPlannedTheory: 10, hoursPlannedPractice: 5, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
-    ]
+    ],
+    learningResults: []
   },
   {
     id: 'mod-proyecto', // Viernes 3ª hora (Proyecto Intermodular)
@@ -46,10 +106,10 @@ export const COURSES_DATA: Course[] = [
       { id: 'm3-u1', title: 'UD1: Definición del Proyecto', description: 'Ideación', hoursPlannedTheory: 5, hoursPlannedPractice: 0, hoursRealized: 5, status: UnitStatus.COMPLETED, trimestres: [1] },
       { id: 'm3-u2', title: 'UD2: Planificación', description: 'Cronograma', hoursPlannedTheory: 5, hoursPlannedPractice: 5, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [2] },
       { id: 'm3-u3', title: 'UD3: Ejecución y Venta', description: 'Puesta en marcha', hoursPlannedTheory: 0, hoursPlannedPractice: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [3] },
-    ]
+    ],
+    learningResults: []
   },
   {
-     // Añadido extra por si acaso, basado en la imagen (Lunes)
     id: 'mod-pasteleria', 
     name: 'Procesos Básicos de Pastelería',
     cycle: 'GM Cocina y Gastronomía',
@@ -59,7 +119,8 @@ export const COURSES_DATA: Course[] = [
     color: '#db2777', // Pink-600
     units: [
       { id: 'm4-u1', title: 'UD1: Masas bases', description: 'Masas quebradas y batidas', hoursPlannedTheory: 5, hoursPlannedPractice: 15, hoursRealized: 0, status: UnitStatus.PENDING, trimestres: [1] },
-    ]
+    ],
+    learningResults: []
   }
 ];
 
