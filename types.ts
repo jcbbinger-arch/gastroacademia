@@ -72,6 +72,7 @@ export interface Exam {
   type: 'Teórico' | 'Práctico';
   unitIds: string[]; // Puede cubrir varias unidades
   topics: string; // Temario específico o descripción
+  duration: number; // Duración en horas
 }
 
 // --- Tipos para el Calendario Dinámico ---

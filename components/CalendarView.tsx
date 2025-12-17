@@ -122,9 +122,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
     if (plannedHours === 0) return { status: 'FREE', planned: 0, logged: 0 };
 
-    // 3. Calculate Logged Hours
+    // 3. Calculate Logged Hours (Classes + Exams)
     const dailyLogs = logs.filter(l => l.date === dateStr);
-    const loggedHours = dailyLogs.reduce((acc, l) => acc + l.hours, 0);
+    const dailyExams = exams.filter(e => e.date === dateStr);
+    
+    // Sum hours from logs
+    const classHours = dailyLogs.reduce((acc, l) => acc + l.hours, 0);
+    // Sum hours from exams (default to 1 if undefined for legacy compatibility)
+    const examHours = dailyExams.reduce((acc, e) => acc + (e.duration || 1), 0);
+    
+    const loggedHours = classHours + examHours;
 
     // 4. Determine Status
     let status: 'COMPLETED' | 'PARTIAL' | 'MISSING' = 'MISSING';
@@ -486,8 +493,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                                             return (
                                                 <div key={ex.id} className="p-3 bg-purple-50 border border-purple-100 rounded-lg mb-2">
                                                     <div className="font-bold text-purple-900 text-sm">{exCourse?.name}</div>
-                                                    <div className="text-xs text-purple-700 mt-1">
-                                                        <span className="font-bold bg-white px-1 rounded">{ex.type}</span> • {ex.unitIds.length} UDs
+                                                    <div className="text-xs text-purple-700 mt-1 flex justify-between">
+                                                        <span><span className="font-bold bg-white px-1 rounded">{ex.type}</span> • {ex.unitIds.length} UDs</span>
+                                                        <span className="font-bold text-gray-800">{ex.duration || 1} h</span>
                                                     </div>
                                                     <p className="text-xs text-gray-600 mt-1 italic">{ex.topics}</p>
                                                 </div>

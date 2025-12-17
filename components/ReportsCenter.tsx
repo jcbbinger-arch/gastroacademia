@@ -23,14 +23,23 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
     const completedUnits = courses.reduce((acc, c) => acc + c.units.filter(u => u.status === 'Completado').length, 0);
     const delayedUnits = courses.reduce((acc, c) => acc + c.units.filter(u => u.status === 'Retrasado').length, 0);
     const totalHoursPlanned = courses.reduce((acc, c) => acc + c.annualHours, 0);
-    const totalHoursLogged = logs.reduce((acc, log) => acc + log.hours, 0);
+    
+    // Total hours logged (Logs + Exams)
+    const logsHours = logs.reduce((acc, log) => acc + log.hours, 0);
+    const examsHours = exams.reduce((acc, ex) => acc + (ex.duration || 1), 0);
+    const totalHoursLogged = logsHours + examsHours;
 
     return { totalUnits, completedUnits, delayedUnits, totalHoursPlanned, totalHoursLogged };
   };
 
   const generateModuleStats = (course: Course) => {
     const completedUnits = course.units.filter(u => u.status === 'Completado').length;
-    const hoursLogged = logs.filter(l => l.courseId === course.id).reduce((acc, l) => acc + l.hours, 0);
+    
+    // Module hours logged (Logs + Exams)
+    const modLogsHours = logs.filter(l => l.courseId === course.id).reduce((acc, l) => acc + l.hours, 0);
+    const modExamsHours = exams.filter(e => e.courseId === course.id).reduce((acc, e) => acc + (e.duration || 1), 0);
+    const hoursLogged = modLogsHours + modExamsHours;
+    
     const logsCount = logs.filter(l => l.courseId === course.id).length;
     
     return { completedUnits, hoursLogged, logsCount };
@@ -205,7 +214,7 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                                     <p className="text-4xl font-black text-green-600">{stats.completedUnits} <span className="text-lg text-gray-400 font-normal">/ {stats.totalUnits}</span></p>
                                 </div>
                                 <div className="p-6 bg-white rounded-lg border-2 border-gray-100 text-center shadow-sm">
-                                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Horas Impartidas</p>
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Horas Impartidas (Clases + Exámenes)</p>
                                     <p className="text-4xl font-black text-blue-600">{stats.totalHoursLogged} h</p>
                                 </div>
                             </>
@@ -264,6 +273,9 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                         <span className="text-xl font-bold text-chef-700">
                             {generateModuleStats(currentModule).completedUnits} / {currentModule.units.length} UD Completadas
                         </span>
+                        <p className="text-xs text-gray-400 mt-1">
+                            {generateModuleStats(currentModule).hoursLogged} horas registradas
+                        </p>
                     </div>
                  </div>
 
@@ -278,6 +290,7 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                                 <tr>
                                     <th className="p-2 border border-gray-200 text-left">Fecha</th>
                                     <th className="p-2 border border-gray-200 text-center">Tipo</th>
+                                    <th className="p-2 border border-gray-200 text-center">Duración</th>
                                     <th className="p-2 border border-gray-200 text-left">Temario / Descripción</th>
                                     <th className="p-2 border border-gray-200 text-center">Unidades Afectadas</th>
                                 </tr>
@@ -290,6 +303,9 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                                         </td>
                                         <td className="p-2 border border-gray-200 text-center">
                                             <span className="font-bold">{ex.type}</span>
+                                        </td>
+                                        <td className="p-2 border border-gray-200 text-center font-bold text-purple-700">
+                                            {ex.duration || 1} h
                                         </td>
                                         <td className="p-2 border border-gray-200 text-gray-700">
                                             {ex.topics}

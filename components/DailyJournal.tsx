@@ -32,6 +32,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
   const [examType, setExamType] = useState<'Teórico' | 'Práctico'>('Teórico');
   const [selectedExamUnits, setSelectedExamUnits] = useState<string[]>([]);
   const [examTopics, setExamTopics] = useState<string>('');
+  const [examDuration, setExamDuration] = useState<number>(1);
 
   const currentCourse = courses.find(c => c.id === selectedCourse);
   
@@ -79,6 +80,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
         duration = totalScheduled > 0 ? totalScheduled : 1;
     }
     setTotalDuration(duration);
+    setExamDuration(duration); // Default exam duration to same as scheduled
     setHourDistribution(Array(duration).fill('Teórica'));
     setPaintMode('Práctica');
     
@@ -151,7 +153,8 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
           courseId: selectedCourse,
           type: examType,
           unitIds: selectedExamUnits,
-          topics: examTopics
+          topics: examTopics,
+          duration: examDuration
       };
 
       setExams([...exams, newExam]);
@@ -160,6 +163,7 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
       setSelectedExamUnits([]);
       setExamTopics('');
       setExamType('Teórico');
+      setExamDuration(1);
   };
 
   const handleDeleteLog = (id: string) => setLogs(logs.filter(l => l.id !== id));
@@ -229,7 +233,10 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
                               </div>
                               <div className="flex items-center gap-2 mb-2 text-xs">
                                   <span className="font-bold bg-white px-2 py-0.5 rounded border border-purple-100">{ex.type}</span>
-                                  <span>{ex.unitIds.length} UDs incluidas</span>
+                                  <span className="font-bold bg-white px-2 py-0.5 rounded border border-purple-100 flex items-center gap-1">
+                                      <Clock size={10} /> {ex.duration}h
+                                  </span>
+                                  <span>{ex.unitIds.length} UDs</span>
                               </div>
                               <p className="text-xs italic opacity-80">{ex.topics}</p>
                           </div>
@@ -501,31 +508,50 @@ const DailyJournal: React.FC<DailyJournalProps> = ({ courses, schedule, logs, se
                     <ClipboardCheck size={20} /> DETALLES DE LA PRUEBA
                 </div>
 
-                {/* Type Selection */}
-                <div>
-                     <label className="block text-sm font-bold text-gray-700 mb-2">Tipo de Prueba</label>
-                     <div className="flex gap-4">
-                         <label className="flex items-center gap-2 cursor-pointer">
+                {/* Type & Duration Row */}
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Type Selection */}
+                    <div className="flex-1">
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Tipo de Prueba</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="examType" 
+                                    checked={examType === 'Teórico'} 
+                                    onChange={() => setExamType('Teórico')}
+                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-gray-700">Teórico</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="examType" 
+                                    checked={examType === 'Práctico'} 
+                                    onChange={() => setExamType('Práctico')}
+                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-gray-700">Práctico</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Duration Input */}
+                    <div>
+                         <label className="block text-sm font-bold text-gray-700 mb-2">Duración (Horas)</label>
+                         <div className="flex items-center gap-2">
                              <input 
-                                type="radio" 
-                                name="examType" 
-                                checked={examType === 'Teórico'} 
-                                onChange={() => setExamType('Teórico')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500"
+                                type="number" 
+                                min="1" 
+                                max="10"
+                                value={examDuration}
+                                onChange={(e) => setExamDuration(Math.max(1, Number(e.target.value)))}
+                                className="w-20 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none text-center font-bold"
                              />
-                             <span className="text-gray-700">Teórico</span>
-                         </label>
-                         <label className="flex items-center gap-2 cursor-pointer">
-                             <input 
-                                type="radio" 
-                                name="examType" 
-                                checked={examType === 'Práctico'} 
-                                onChange={() => setExamType('Práctico')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500"
-                             />
-                             <span className="text-gray-700">Práctico</span>
-                         </label>
-                     </div>
+                             <span className="text-sm text-gray-500">h</span>
+                         </div>
+                    </div>
                 </div>
 
                 {/* Unit Multi-Select */}
