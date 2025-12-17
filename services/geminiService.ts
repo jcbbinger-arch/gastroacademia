@@ -1,14 +1,11 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { COURSES_DATA, EVALUATIONS_DATA } from "../constants";
-
-// Declaración para evitar errores de TS al usar process.env que será reemplazado por Vite
-declare var process: { env: { API_KEY: string } };
 
 let client: GoogleGenAI | null = null;
 
 const getClient = () => {
-  // Vite reemplazará process.env.API_KEY con el valor real en tiempo de compilación.
-  // Usamos una verificación segura por si acaso.
+  // Use the API key exclusively from environment variable process.env.API_KEY.
   const apiKey = process.env.API_KEY;
 
   if (!client && apiKey) {
@@ -45,10 +42,11 @@ export const generateAcademicResponse = async (
   `;
 
   try {
-    const model = genAI.models;
-    const response = await model.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: message,
+    // Changed model to 'gemini-3-flash-preview' for basic academic reasoning tasks.
+    // Passed the full history + new message to ensure context continuity.
+    const response = await genAI.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [...history, { role: 'user', parts: [{ text: message }] }],
       config: {
         systemInstruction: systemInstruction,
       }

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
@@ -33,13 +34,11 @@ import { Course, ScheduleSlot, ClassLog, SchoolInfo, TeacherInfo, BackupData, Ca
 
 type View = 'landing' | 'dashboard' | 'calendar' | 'units' | 'journal' | 'ai' | 'config' | 'schedule' | 'settings' | 'reports' | 'backup';
 
-// Helper to load from LocalStorage or fallback to default
 const loadState = <T,>(key: string, fallback: T): T => {
   try {
     const saved = localStorage.getItem(key);
     return saved ? JSON.parse(saved) : fallback;
   } catch (e) {
-    console.warn(`Error loading ${key} from localStorage`, e);
     return fallback;
   }
 };
@@ -48,16 +47,13 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Shared Data State with Persistence
   const [courses, setCourses] = useState<Course[]>(() => loadState('gastro_courses', COURSES_DATA));
   const [schedule, setSchedule] = useState<ScheduleSlot[]>(() => loadState('gastro_schedule', TEACHER_SCHEDULE));
   const [logs, setLogs] = useState<ClassLog[]>(() => loadState('gastro_logs', INITIAL_LOGS));
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(() => loadState('gastro_events', CALENDAR_EVENTS));
   const [exams, setExams] = useState<Exam[]>(() => loadState('gastro_exams', []));
   
-  // Calendar Lock State (Lifted Up for Persistence)
   const [isCalendarLocked, setIsCalendarLocked] = useState<boolean>(() => loadState('gastro_calendar_locked', false));
-
   const [journalDate, setJournalDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(() => loadState('gastro_schoolInfo', {
@@ -73,7 +69,6 @@ const App: React.FC = () => {
     avatarUrl: "" 
   }));
 
-  // Effect to Auto-Save changes to LocalStorage
   useEffect(() => { localStorage.setItem('gastro_courses', JSON.stringify(courses)); }, [courses]);
   useEffect(() => { localStorage.setItem('gastro_schedule', JSON.stringify(schedule)); }, [schedule]);
   useEffect(() => { localStorage.setItem('gastro_logs', JSON.stringify(logs)); }, [logs]);
@@ -101,76 +96,28 @@ const App: React.FC = () => {
   };
 
   const handleResetApp = () => {
-    // Clear LocalStorage
-    localStorage.removeItem('gastro_courses');
-    localStorage.removeItem('gastro_schedule');
-    localStorage.removeItem('gastro_logs');
-    localStorage.removeItem('gastro_events');
-    localStorage.removeItem('gastro_exams');
-    localStorage.removeItem('gastro_schoolInfo');
-    localStorage.removeItem('gastro_teacherInfo');
-    localStorage.removeItem('gastro_calendar_locked');
-
-    // Reset State
+    localStorage.clear();
     setCourses(COURSES_DATA);
     setSchedule(TEACHER_SCHEDULE);
     setLogs([]); 
     setCalendarEvents(CALENDAR_EVENTS);
     setExams([]);
     setIsCalendarLocked(false);
-    
-    setSchoolInfo({
-        name: "Nombre del Centro",
-        logoUrl: "", 
-        academicYear: "2025-2026",
-        department: "Dpto. Hostelería y Turismo"
-    });
-    setTeacherInfo({
-        name: "Nombre del Profesor",
-        role: "Docente",
-        avatarUrl: "" 
-    });
-    
-    alert("La aplicación ha sido restablecida a sus valores de fábrica y la memoria local ha sido borrada.");
     setCurrentView('dashboard');
   };
 
   if (currentView === 'landing') {
-    return (
-      <LandingPage 
-        onEnter={() => setCurrentView('dashboard')} 
-        creatorName="Juan Codina"
-      />
-    );
+    return <LandingPage onEnter={() => setCurrentView('dashboard')} creatorName="Juan Codina" />;
   }
 
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} />;
+        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} />;
       case 'calendar':
-        return <CalendarView 
-                  events={calendarEvents} 
-                  logs={logs} 
-                  exams={exams}
-                  schedule={schedule} 
-                  courses={courses}
-                  schoolInfo={schoolInfo}
-                  onNavigateToJournal={handleNavigateToJournal}
-                  isLocked={isCalendarLocked}
-                  onToggleLock={setIsCalendarLocked}
-                />;
+        return <CalendarView events={calendarEvents} logs={logs} exams={exams} schedule={schedule} courses={courses} schoolInfo={schoolInfo} onNavigateToJournal={handleNavigateToJournal} isLocked={isCalendarLocked} onToggleLock={setIsCalendarLocked} />;
       case 'journal':
-        return <DailyJournal 
-                  courses={courses} 
-                  schedule={schedule} 
-                  logs={logs} 
-                  setLogs={setLogs}
-                  exams={exams}
-                  setExams={setExams}
-                  date={journalDate}
-                  setDate={setJournalDate}
-                />;
+        return <DailyJournal courses={courses} schedule={schedule} logs={logs} setLogs={setLogs} exams={exams} setExams={setExams} date={journalDate} setDate={setJournalDate} />;
       case 'units':
         return <UnitsTracker courses={courses} />;
       case 'config':
@@ -180,28 +127,13 @@ const App: React.FC = () => {
       case 'reports':
         return <ReportsCenter courses={courses} logs={logs} exams={exams} schoolInfo={schoolInfo} teacherInfo={teacherInfo} />;
       case 'backup':
-        return <BackupManager 
-                  courses={courses} 
-                  schedule={schedule} 
-                  logs={logs} 
-                  events={calendarEvents} 
-                  exams={exams}
-                  schoolInfo={schoolInfo} 
-                  teacherInfo={teacherInfo}
-                  onImportData={handleImportData}
-                  onResetData={handleResetApp}
-               />;
+        return <BackupManager courses={courses} schedule={schedule} logs={logs} events={calendarEvents} exams={exams} schoolInfo={schoolInfo} teacherInfo={teacherInfo} onImportData={handleImportData} onResetData={handleResetApp} />;
       case 'settings':
-        return <SettingsPanel 
-                  schoolInfo={schoolInfo} 
-                  setSchoolInfo={setSchoolInfo} 
-                  teacherInfo={teacherInfo} 
-                  setTeacherInfo={setTeacherInfo} 
-               />;
+        return <SettingsPanel schoolInfo={schoolInfo} setSchoolInfo={setSchoolInfo} teacherInfo={teacherInfo} setTeacherInfo={setTeacherInfo} />;
       case 'ai':
         return <AIAssistant />;
       default:
-        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} />;
+        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} />;
     }
   };
 
@@ -223,60 +155,35 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-100 font-sans">
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-20 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar - Stronger Look */}
-      <aside 
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r-2 border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none flex flex-col shadow-xl lg:shadow-none ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        {/* School Info Header */}
+    <div className="flex min-h-screen bg-gray-100 font-sans text-slate-900 antialiased">
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/60 z-20 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-white border-r-2 border-gray-200 transform transition-transform duration-200 ease-in-out lg:transform-none flex flex-col shadow-xl lg:shadow-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b-2 border-gray-100 bg-gray-50/50">
            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-md flex-shrink-0 border-2 border-blue-800">
-                 {schoolInfo.logoUrl ? (
-                     <img src={schoolInfo.logoUrl} alt="Logo School" className="w-full h-full object-cover"/>
-                 ) : (
-                     <School size={24} strokeWidth={2} />
-                 )}
+              <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center text-white overflow-hidden shadow-md border-2 border-blue-800">
+                 {schoolInfo.logoUrl ? <img src={schoolInfo.logoUrl} alt="Logo" className="w-full h-full object-cover"/> : <School size={24} />}
               </div>
               <div className="flex-1 min-w-0">
-                 <h1 className="font-black text-gray-900 text-sm truncate leading-tight tracking-tight" title={schoolInfo.name}>{schoolInfo.name}</h1>
+                 <h1 className="font-black text-gray-900 text-sm truncate leading-tight tracking-tight">{schoolInfo.name}</h1>
                  <p className="text-xs font-bold text-gray-500 bg-gray-200 inline-block px-2 py-0.5 rounded mt-1">{schoolInfo.academicYear}</p>
               </div>
            </div>
-
-           {/* Teacher Profile */}
            <div className="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:border-chef-300 hover:shadow-md transition group" onClick={() => setCurrentView('settings')}>
-              <div className="w-10 h-10 rounded-full bg-chef-100 flex items-center justify-center text-chef-700 overflow-hidden flex-shrink-0 border-2 border-chef-200 group-hover:border-chef-400">
-                 {teacherInfo.avatarUrl ? (
-                     <img src={teacherInfo.avatarUrl} alt="Avatar" className="w-full h-full object-cover"/>
-                 ) : (
-                     <UserCircle size={28} />
-                 )}
+              <div className="w-10 h-10 rounded-full bg-chef-100 flex items-center justify-center text-chef-700 overflow-hidden border-2 border-chef-200">
+                 {teacherInfo.avatarUrl ? <img src={teacherInfo.avatarUrl} alt="Avatar" className="w-full h-full object-cover"/> : <UserCircle size={28} />}
               </div>
               <div className="flex-1 min-w-0">
-                 <p className="text-sm font-extrabold text-gray-800 truncate" title={teacherInfo.name}>{teacherInfo.name}</p>
+                 <p className="text-sm font-extrabold text-gray-800 truncate">{teacherInfo.name}</p>
                  <p className="text-[10px] font-bold text-gray-500 truncate uppercase tracking-wide">{teacherInfo.role}</p>
               </div>
            </div>
         </div>
-
         <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
           <NavItem view="dashboard" icon={LayoutDashboard} label="Panel General" />
           <NavItem view="journal" icon={NotebookPen} label="Diario de Clase" />
           <NavItem view="calendar" icon={CalendarDays} label="Calendario" />
           <NavItem view="units" icon={BookOpen} label="Programación" />
           <NavItem view="reports" icon={FileText} label="Informes" />
-          
           <div className="pt-6 mt-6 border-t-2 border-gray-100">
              <div className="px-4 mb-3 text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Gestión
@@ -286,7 +193,6 @@ const App: React.FC = () => {
              <NavItem view="backup" icon={Database} label="Copias Seguridad" />
              <NavItem view="settings" icon={UserCircle} label="Identidad" />
           </div>
-          
           <div className="pt-6 mt-6 border-t-2 border-gray-100 pb-4">
              <div className="px-4 mb-3 text-xs font-black text-chef-600 uppercase tracking-widest flex items-center gap-2">
                <span className="w-1.5 h-1.5 rounded-full bg-chef-600"></span> Inteligencia
@@ -295,28 +201,20 @@ const App: React.FC = () => {
           </div>
         </nav>
       </aside>
-
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-100/50">
-        {/* Mobile Header */}
         <header className="bg-white border-b-2 border-gray-200 p-4 flex items-center justify-between lg:hidden shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-chef-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-chef-700/20">
+            <div className="w-10 h-10 bg-chef-700 rounded-xl flex items-center justify-center text-white">
               <GraduationCap size={24} strokeWidth={2.5} />
             </div>
             <span className="font-black text-gray-900 text-lg tracking-tight">GastroAcademia</span>
           </div>
-          <button 
-            onClick={toggleSidebar}
-            className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 border-2 border-transparent hover:border-gray-200 transition"
-          >
+          <button onClick={toggleSidebar} className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 border-2 border-transparent hover:border-gray-200 transition">
             {isSidebarOpen ? <X size={26} strokeWidth={2.5} /> : <Menu size={26} strokeWidth={2.5} />}
           </button>
         </header>
-
         <div className="flex-1 overflow-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto h-full">
-            {/* Contenedor principal con diseño reforzado */}
             <div className="bg-white/50 rounded-3xl min-h-full">
                {renderContent()}
             </div>
