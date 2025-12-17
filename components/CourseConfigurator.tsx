@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Course, Unit, UnitStatus } from '../types';
-import { Plus, Trash2, Save, Settings, BookOpen, Clock, AlertCircle, PieChart, Check } from 'lucide-react';
+import { Plus, Trash2, Settings, BookOpen, Clock, AlertCircle, Check, RefreshCw } from 'lucide-react';
 
 interface CourseConfiguratorProps {
   courses: Course[];
@@ -9,30 +9,34 @@ interface CourseConfiguratorProps {
 
 const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpdateCourses }) => {
   const [activeCourseId, setActiveCourseId] = useState<string>(courses[0]?.id || '');
-  const [editingCourse, setEditingCourse] = useState<Course | null>(courses.find(c => c.id === courses[0]?.id) || null);
 
-  // When clicking a course in the list
+  // Derived state: Always get the truth from the props
+  const activeCourse = courses.find(c => c.id === activeCourseId);
+
+  // --- IMMEDIATE UPDATE HELPERS ---
+  
+  const updateGlobalCourse = (updatedCourse: Course) => {
+    const newCourses = courses.map(c => c.id === updatedCourse.id ? updatedCourse : c);
+    onUpdateCourses(newCourses);
+  };
+
   const handleSelectCourse = (id: string) => {
     setActiveCourseId(id);
-    const found = courses.find(c => c.id === id);
-    if (found) {
-      setEditingCourse({ ...found }); // Clone to avoid direct mutation
-    }
   };
 
   const handleAddNewCourse = () => {
     const newCourse: Course = {
       id: `new-${Date.now()}`,
       name: 'Nuevo Módulo',
-      cycle: 'GM/GS...',
+      cycle: 'Ciclo Formativo',
       grade: '1º',
       weeklyHours: 0,
       annualHours: 0,
+      color: '#a18072',
       units: []
     };
     onUpdateCourses([...courses, newCourse]);
     setActiveCourseId(newCourse.id);
-    setEditingCourse(newCourse);
   };
 
   const handleDeleteCourse = (id: string) => {
@@ -40,50 +44,44 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
       const updated = courses.filter(c => c.id !== id);
       onUpdateCourses(updated);
       if (updated.length > 0) {
-        handleSelectCourse(updated[0].id);
+        setActiveCourseId(updated[0].id);
       } else {
-        setEditingCourse(null);
+        setActiveCourseId('');
       }
     }
-  };
-
-  const handleSaveCourse = () => {
-    if (!editingCourse) return;
-    const updatedCourses = courses.map(c => c.id === editingCourse.id ? editingCourse : c);
-    onUpdateCourses(updatedCourses);
-    alert('Módulo guardado correctamente');
   };
 
   // --- Units Management ---
 
   const handleAddUnit = () => {
-    if (!editingCourse) return;
+    if (!activeCourse) return;
     const newUnit: Unit = {
       id: `u-${Date.now()}`,
-      title: `UD${editingCourse.units.length + 1}: Título`,
+      title: `UD${activeCourse.units.length + 1}: Título`,
       description: 'Descripción breve...',
       hoursPlanned: 10,
       hoursRealized: 0,
       status: UnitStatus.PENDING,
       trimestres: [1]
     };
-    setEditingCourse({
-      ...editingCourse,
-      units: [...editingCourse.units, newUnit]
-    });
+    const updatedCourse = {
+      ...activeCourse,
+      units: [...activeCourse.units, newUnit]
+    };
+    updateGlobalCourse(updatedCourse);
   };
 
   const handleUpdateUnit = (unitId: string, field: keyof Unit, value: any) => {
-    if (!editingCourse) return;
-    const updatedUnits = editingCourse.units.map(u => 
+    if (!activeCourse) return;
+    const updatedUnits = activeCourse.units.map(u => 
       u.id === unitId ? { ...u, [field]: value } : u
     );
-    setEditingCourse({ ...editingCourse, units: updatedUnits });
+    updateGlobalCourse({ ...activeCourse, units: updatedUnits });
   };
 
   const toggleTrimestre = (unitId: string, trim: number) => {
-    if (!editingCourse) return;
-    const unit = editingCourse.units.find(u => u.id === unitId);
+    if (!activeCourse) return;
+    const unit = activeCourse.units.find(u => u.id === unitId);
     if (!unit) return;
 
     let newTrims = [...unit.trimestres];
@@ -95,23 +93,23 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
     } else {
         newTrims.push(trim);
     }
-    // Sort logic
     newTrims.sort();
     
     handleUpdateUnit(unitId, 'trimestres', newTrims);
   };
 
   const handleDeleteUnit = (unitId: string) => {
-    if (!editingCourse) return;
-    setEditingCourse({
-      ...editingCourse,
-      units: editingCourse.units.filter(u => u.id !== unitId)
-    });
+    if (!activeCourse) return;
+    const updatedCourse = {
+      ...activeCourse,
+      units: activeCourse.units.filter(u => u.id !== unitId)
+    };
+    updateGlobalCourse(updatedCourse);
   };
 
   // Calculations
-  const totalPlannedHours = editingCourse?.units.reduce((acc, u) => acc + u.hoursPlanned, 0) || 0;
-  const annualHours = editingCourse?.annualHours || 0;
+  const totalPlannedHours = activeCourse?.units.reduce((acc, u) => acc + u.hoursPlanned, 0) || 0;
+  const annualHours = activeCourse?.annualHours || 0;
   const hoursDiff = annualHours - totalPlannedHours;
   const progressPercent = annualHours > 0 ? (totalPlannedHours / annualHours) * 100 : 0;
   
@@ -125,15 +123,15 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
     statusColor = 'bg-green-500';
     statusText = 'Cuadre Perfecto';
   } else {
-    statusText = `Pendiente: ${hoursDiff}h`;
+    statusText = `Pendiente de asignar: ${hoursDiff}h`;
   }
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-6 animate-fade-in pb-10">
       
       {/* Sidebar List of Modules */}
-      <div className="w-full lg:w-1/4 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        <div className="p-4 bg-chef-50 border-b border-gray-100 flex justify-between items-center">
+      <div className="w-full lg:w-1/4 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[600px]">
+        <div className="p-4 bg-chef-50 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
           <h3 className="font-bold text-gray-800">Módulos</h3>
           <button onClick={handleAddNewCourse} className="p-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition">
             <Plus size={18} />
@@ -165,31 +163,28 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
       </div>
 
       {/* Main Edit Panel */}
-      <div className="w-full lg:w-3/4 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
-        {editingCourse ? (
+      <div className="w-full lg:w-3/4 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[600px]">
+        {activeCourse ? (
           <>
-            <div className="p-6 border-b border-gray-100 bg-white">
+            <div className="p-6 border-b border-gray-100 bg-white flex-shrink-0">
               <div className="flex justify-between items-start mb-6">
                 <div>
                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                      <Settings size={20} className="text-gray-400" />
                      Configuración del Módulo
                    </h2>
-                   <p className="text-sm text-gray-500">Define los datos oficiales (BOE) y distribuye la carga horaria.</p>
+                   <p className="text-xs text-green-600 font-bold flex items-center gap-1 mt-1">
+                     <RefreshCw size={12} className="animate-spin-slow" />
+                     Guardado automático activado
+                   </p>
                 </div>
                 <div className="flex gap-2">
                    <button 
-                     onClick={() => handleDeleteCourse(editingCourse.id)}
-                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
+                     onClick={() => handleDeleteCourse(activeCourse.id)}
+                     className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition border border-transparent hover:border-red-100"
                      title="Borrar Módulo"
                    >
                      <Trash2 size={20} />
-                   </button>
-                   <button 
-                     onClick={handleSaveCourse}
-                     className="bg-chef-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-chef-700 transition shadow-sm"
-                   >
-                     <Save size={18} /> Guardar Cambios
                    </button>
                 </div>
               </div>
@@ -200,27 +195,27 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del Módulo</label>
                     <input 
                       type="text" 
-                      value={editingCourse.name}
-                      onChange={(e) => setEditingCourse({...editingCourse, name: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none"
+                      value={activeCourse.name}
+                      onChange={(e) => updateGlobalCourse({...activeCourse, name: e.target.value})}
+                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none transition-shadow"
                     />
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Ciclo Formativo</label>
                     <input 
                       type="text" 
-                      value={editingCourse.cycle}
-                      onChange={(e) => setEditingCourse({...editingCourse, cycle: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none"
+                      value={activeCourse.cycle}
+                      onChange={(e) => updateGlobalCourse({...activeCourse, cycle: e.target.value})}
+                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none transition-shadow"
                       placeholder="Ej: GM Cocina"
                     />
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Curso</label>
                     <select
-                      value={editingCourse.grade}
-                      onChange={(e) => setEditingCourse({...editingCourse, grade: e.target.value})}
-                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none bg-white"
+                      value={activeCourse.grade}
+                      onChange={(e) => updateGlobalCourse({...activeCourse, grade: e.target.value})}
+                      className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none bg-white transition-shadow"
                     >
                        <option value="1º Curso">1º Curso</option>
                        <option value="2º Curso">2º Curso</option>
@@ -236,9 +231,9 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                       <div className="relative">
                         <input 
                           type="number" 
-                          value={editingCourse.weeklyHours}
-                          onChange={(e) => setEditingCourse({...editingCourse, weeklyHours: Number(e.target.value)})}
-                          className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none pl-8"
+                          value={activeCourse.weeklyHours}
+                          onChange={(e) => updateGlobalCourse({...activeCourse, weeklyHours: Number(e.target.value)})}
+                          className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-chef-500 outline-none pl-8 transition-shadow"
                         />
                         <Clock size={14} className="absolute top-3 left-2.5 text-gray-400" />
                       </div>
@@ -251,9 +246,9 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                       </label>
                       <input 
                         type="number" 
-                        value={editingCourse.annualHours}
-                        onChange={(e) => setEditingCourse({...editingCourse, annualHours: Number(e.target.value)})}
-                        className="w-full p-2 border-2 border-chef-200 rounded focus:ring-2 focus:ring-chef-500 outline-none font-bold text-gray-800"
+                        value={activeCourse.annualHours}
+                        onChange={(e) => updateGlobalCourse({...activeCourse, annualHours: Number(e.target.value)})}
+                        className="w-full p-2 border-2 border-chef-200 rounded focus:ring-2 focus:ring-chef-500 outline-none font-bold text-gray-800 transition-shadow"
                         placeholder="Ej: 350"
                       />
                       <p className="text-[10px] text-gray-400 mt-1">Cifra oficial que debe cuadrar.</p>
@@ -294,8 +289,8 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                  </button>
               </div>
 
-              <div className="space-y-3">
-                 {editingCourse.units.map((unit, index) => (
+              <div className="space-y-3 pb-8">
+                 {activeCourse.units.map((unit) => (
                    <div key={unit.id} className="flex flex-col md:flex-row gap-3 p-4 border border-gray-200 rounded-lg hover:border-chef-300 transition-colors bg-gray-50/50">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                          {/* Title */}
@@ -351,12 +346,13 @@ const CourseConfigurator: React.FC<CourseConfiguratorProps> = ({ courses, onUpda
                       <button 
                         onClick={() => handleDeleteUnit(unit.id)}
                         className="text-gray-400 hover:text-red-500 self-center p-2"
+                        title="Eliminar Unidad"
                       >
                         <Trash2 size={18} />
                       </button>
                    </div>
                  ))}
-                 {editingCourse.units.length === 0 && (
+                 {activeCourse.units.length === 0 && (
                    <div className="text-center py-8 text-gray-400 italic bg-gray-50 border border-dashed border-gray-200 rounded-lg">
                      No hay unidades definidas. Comienza añadiendo la primera.
                    </div>
