@@ -227,21 +227,86 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                                         <table className="w-full text-sm border-collapse border border-gray-200 shadow-sm">
                                             <thead className="bg-purple-50 text-purple-900 text-xs uppercase font-bold">
                                                 <tr>
-                                                    <th className="p-3 border border-gray-200 text-left">Fecha</th>
-                                                    <th className="p-3 border border-gray-200 text-center">Tipo</th>
-                                                    <th className="p-3 border border-gray-200 text-center">Duración</th>
+                                                    <th className="p-3 border border-gray-200 text-left w-32">Fecha</th>
+                                                    <th className="p-3 border border-gray-200 text-center w-24">Tipo</th>
+                                                    <th className="p-3 border border-gray-200 text-left">Unidades Evaluadas</th>
                                                     <th className="p-3 border border-gray-200 text-left">Temario / Descripción</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {exams.filter(e => e.courseId === currentModule.id).map(ex => (
-                                                    <tr key={ex.id} className="hover:bg-purple-50/20">
-                                                        <td className="p-3 border border-gray-200 font-mono text-gray-600">{new Date(ex.date).toLocaleDateString()}</td>
-                                                        <td className="p-3 border border-gray-200 text-center font-bold">{ex.type}</td>
-                                                        <td className="p-3 border border-gray-200 text-center font-bold text-purple-700">{ex.duration || 1} h</td>
-                                                        <td className="p-3 border border-gray-200 text-gray-700">{ex.topics}</td>
-                                                    </tr>
-                                                ))}
+                                                {exams.filter(e => e.courseId === currentModule.id).map(ex => {
+                                                    // Resolve Unit Titles
+                                                    const unitTitles = ex.unitIds.map(uid => {
+                                                        const u = currentModule.units.find(unit => unit.id === uid);
+                                                        return u ? u.title.split(':')[0] : 'U?';
+                                                    }).join(', ');
+
+                                                    return (
+                                                        <tr key={ex.id} className="hover:bg-purple-50/20 break-inside-avoid">
+                                                            <td className="p-3 border border-gray-200 font-mono text-gray-600">{new Date(ex.date).toLocaleDateString()}</td>
+                                                            <td className="p-3 border border-gray-200 text-center font-bold">
+                                                                <div className="flex flex-col items-center">
+                                                                    <span>{ex.type}</span>
+                                                                    <span className="text-[10px] text-gray-400 font-normal">({ex.duration || 1}h)</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-3 border border-gray-200">
+                                                                {ex.unitIds.length > 0 ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {ex.unitIds.map(uid => {
+                                                                            const u = currentModule.units.find(unit => unit.id === uid);
+                                                                            return u ? (
+                                                                                <span key={uid} className="inline-block bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0.5 rounded border border-purple-200 font-bold">
+                                                                                    {u.title.split(':')[0]}
+                                                                                </span>
+                                                                            ) : null;
+                                                                        })}
+                                                                    </div>
+                                                                ) : <span className="text-gray-400 italic">Global</span>}
+                                                            </td>
+                                                            <td className="p-3 border border-gray-200 text-gray-700 text-xs italic">{ex.topics}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+
+                                {/* INCIDENTS SECTION */}
+                                <div className="mb-8 break-inside-avoid">
+                                    <h3 className="font-bold text-gray-700 mb-4 border-l-4 border-red-500 pl-3 uppercase tracking-wide">Registro de Incidencias y Asistencia</h3>
+                                    {logs.filter(l => l.courseId === currentModule.id && l.status !== 'Impartida').length === 0 ? (
+                                        <div className="p-4 bg-gray-50 rounded border border-gray-100 text-center text-gray-400 text-sm italic">
+                                            No se han registrado incidencias (Faltas de asistencia / Profesor) en este módulo.
+                                        </div>
+                                    ) : (
+                                        <table className="w-full text-sm border-collapse border border-gray-200 shadow-sm">
+                                            <thead className="bg-red-50 text-red-900 text-xs uppercase font-bold">
+                                                <tr>
+                                                    <th className="p-3 border border-gray-200 text-left w-32">Fecha</th>
+                                                    <th className="p-3 border border-gray-200 text-center w-32">Tipo Incidencia</th>
+                                                    <th className="p-3 border border-gray-200 text-left">Observaciones / Motivo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {logs
+                                                    .filter(l => l.courseId === currentModule.id && l.status !== 'Impartida')
+                                                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                                    .map(inc => (
+                                                        <tr key={inc.id} className="hover:bg-red-50/20">
+                                                            <td className="p-3 border border-gray-200 font-mono text-gray-600">{new Date(inc.date).toLocaleDateString()}</td>
+                                                            <td className="p-3 border border-gray-200 text-center">
+                                                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${inc.status === 'Falta Profesor' ? 'bg-red-100 text-red-800 border-red-200' :
+                                                                    inc.status === 'Falta Alumnos' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                                                        'bg-gray-100 text-gray-800 border-gray-200'
+                                                                    }`}>
+                                                                    {inc.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 border border-gray-200 text-gray-700 text-xs">{inc.notes || '-'}</td>
+                                                        </tr>
+                                                    ))}
                                             </tbody>
                                         </table>
                                     )}
@@ -310,9 +375,9 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
 
                                                             <td className="p-3 text-center align-middle">
                                                                 <span className={`px-2 py-1 rounded text-[9px] font-black uppercase border ${u.status === 'Completado' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                                        u.status === 'Retrasado' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                            u.status === 'En Progreso' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                                                'bg-gray-50 text-gray-500 border-gray-200'
+                                                                    u.status === 'Retrasado' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                                        u.status === 'En Progreso' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                            'bg-gray-50 text-gray-500 border-gray-200'
                                                                     }`}>
                                                                     {u.status}
                                                                 </span>
@@ -344,7 +409,7 @@ const ReportsCenter: React.FC<ReportsCenterProps> = ({ courses, logs, exams, sch
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 
