@@ -1,5 +1,4 @@
-
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
@@ -12,9 +11,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-// Fixed Error: "Property 'state' and 'props' does not exist on type 'ErrorBoundary'"
-// Explicitly importing Component and using property initializers to ensure TypeScript correctly recognizes inherited properties.
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   // Using property initializer for state to ensure it is correctly typed and recognized by the compiler
   public state: ErrorBoundaryState = {
     hasError: false,
