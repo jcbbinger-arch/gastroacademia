@@ -1,279 +1,357 @@
 import React, { useState } from 'react';
 import { Course, Unit, UnitStatus, ResultadoAprendizaje } from '../types';
-import { Clock, AlertCircle, Layers, GraduationCap, ChevronRight, CheckCircle2, Link as LinkIcon } from 'lucide-react';
+import { Clock, AlertCircle, Layers, GraduationCap, ChevronRight, CheckCircle2, Link as LinkIcon, ArrowLeft, LayoutGrid } from 'lucide-react';
 
 interface UnitsTrackerProps {
-  courses: Course[];
+    courses: Course[];
 }
 
 const StatusBadge: React.FC<{ status: UnitStatus }> = ({ status }) => {
-  const colors = {
-    [UnitStatus.COMPLETED]: 'bg-green-100 text-green-700 border-green-200',
-    [UnitStatus.IN_PROGRESS]: 'bg-blue-100 text-blue-700 border-blue-200',
-    [UnitStatus.PENDING]: 'bg-gray-100 text-gray-600 border-gray-200',
-    [UnitStatus.DELAYED]: 'bg-red-100 text-red-700 border-red-200',
-  };
+    const colors = {
+        [UnitStatus.COMPLETED]: 'bg-green-100 text-green-700 border-green-200',
+        [UnitStatus.IN_PROGRESS]: 'bg-blue-100 text-blue-700 border-blue-200',
+        [UnitStatus.PENDING]: 'bg-gray-100 text-gray-600 border-gray-200',
+        [UnitStatus.DELAYED]: 'bg-red-100 text-red-700 border-red-200',
+    };
 
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[status]}`}>
-      {status}
-    </span>
-  );
+    return (
+        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${colors[status]}`}>
+            {status}
+        </span>
+    );
 };
 
 const UnitsTracker: React.FC<UnitsTrackerProps> = ({ courses }) => {
-  const [activeTab, setActiveTab] = useState<'units' | 'ras'>('units');
+    const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'units' | 'ras'>('units');
 
-  // --- HELPER: Calculate RA Progress based on linked Units ---
-  const getRaStats = (ra: ResultadoAprendizaje, units: Unit[]) => {
-    // 1. Find all unique Unit IDs linked to this RA via Criteria Associations
-    const linkedUnitIds = new Set<string>();
-    ra.criterios.forEach(crit => {
-        crit.asociaciones.forEach(assoc => {
-            if (assoc.utId) linkedUnitIds.add(assoc.utId);
+    const selectedCourse = courses.find(c => c.id === selectedCourseId);
+
+    // --- HELPER: Calculate RA Progress based on Weighted Criteria ---
+    const getRaStats = (ra: ResultadoAprendizaje, units: Unit[]) => {
+        let totalRaPercent = 0;
+
+        // Calculate progress for each criterion independently
+        const criteriaDetails = ra.criterios.map(crit => {
+            // 1. Find linked units for this specific criterion
+            const linkedUnitIds = crit.asociaciones.map(a => a.utId).filter(Boolean);
+            const linkedUnits = units.filter(u => linkedUnitIds.includes(u.id));
+
+            // 2. Calculate progress for this criterion
+            let critProgress = 0;
+            if (linkedUnits.length > 0) {
+                const totalPlanned = linkedUnits.reduce((acc, u) => acc + u.hoursPlannedTheory + u.hoursPlannedPractice, 0);
+                const totalRealized = linkedUnits.reduce((acc, u) => acc + u.hoursRealized, 0);
+                // Cap at 1 (100%) to prevent over-contribution
+                critProgress = totalPlanned > 0 ? Math.min(1, totalRealized / totalPlanned) : 0;
+            }
+
+            // 3. Weight contribution
+            const contribution = critProgress * crit.ponderacion;
+            totalRaPercent += contribution;
+
+            return {
+                id: crit.id,
+                codigo: crit.codigo,
+                descripcion: crit.descripcion,
+                ponderacion: crit.ponderacion,
+                realProgressPercent: critProgress * 100,
+                contribution: contribution,
+                linkedUnits: linkedUnits
+            };
         });
-    });
 
-    // 2. Aggregate hours from those Units
-    let totalPlanned = 0;
-    let totalRealized = 0;
-    const linkedUnitsDetails: { id: string; title: string; percent: number }[] = [];
+        return { percent: totalRaPercent, criteriaDetails };
+    };
 
-    if (linkedUnitIds.size === 0) {
-        return { totalPlanned: 0, totalRealized: 0, percent: 0, linkedUnitsDetails: [] };
+    // --- VIEW 1: MODULE SELECTION GALLERY ---
+    if (!selectedCourseId) {
+        return (
+            <div className="animate-fade-in pb-10">
+                <div className="mb-8">
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                        <Layers className="text-chef-600" size={32} /> Seguimiento Académico
+                    </h2>
+                    <p className="text-gray-500 font-bold mt-2 ml-11">Selecciona un módulo para ver el desglose detallado.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {courses.map(course => {
+                        const totalRealized = course.units.reduce((acc, u) => acc + (u.hoursRealized || 0), 0);
+                        const totalPlanned = course.units.reduce((acc, u) => acc + ((u.hoursPlannedTheory || 0) + (u.hoursPlannedPractice || 0)), 0);
+                        const percent = Math.round((totalRealized / Math.max(1, totalPlanned)) * 100);
+
+                        return (
+                            <div
+                                key={course.id}
+                                onClick={() => setSelectedCourseId(course.id)}
+                                className="bg-white p-6 rounded-2xl border-2 border-gray-100 shadow-sm hover:shadow-xl hover:border-chef-200 transition-all cursor-pointer group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <LayoutGrid size={100} />
+                                </div>
+
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <h3 className="text-xl font-black text-gray-800 group-hover:text-chef-700 transition-colors">{course.name}</h3>
+                                        <ChevronRight className="text-gray-300 group-hover:text-chef-500 transition-colors" />
+                                    </div>
+
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-6">{course.cycle}</p>
+
+                                    <div className="flex items-end justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase">Progreso Global</p>
+                                            <p className="text-3xl font-black text-chef-600">{percent}%</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase">Horas</p>
+                                            <p className="text-sm font-bold text-gray-600">{totalRealized} / {totalPlanned} h</p>
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-3 overflow-hidden">
+                                        <div className="bg-chef-500 h-full rounded-full transition-all" style={{ width: `${percent}%` }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
     }
 
-    linkedUnitIds.forEach(utId => {
-        const unit = units.find(u => u.id === utId);
-        if (unit) {
-            const uPlanned = unit.hoursPlannedTheory + unit.hoursPlannedPractice;
-            const uRealized = unit.hoursRealized;
-            totalPlanned += uPlanned;
-            totalRealized += uRealized;
-            
-            linkedUnitsDetails.push({
-                id: unit.id,
-                title: unit.title.split(':')[0], // e.g., "UD1"
-                percent: uPlanned > 0 ? (uRealized / uPlanned) * 100 : 0
-            });
-        }
-    });
+    // --- VIEW 2: DETAILED MODULE VIEW ---
+    const totalRealized = selectedCourse!.units.reduce((acc, u) => acc + (u.hoursRealized || 0), 0);
+    const totalPlanned = selectedCourse!.units.reduce((acc, u) => acc + ((u.hoursPlannedTheory || 0) + (u.hoursPlannedPractice || 0)), 0);
+    const moduleDeviation = totalRealized - totalPlanned;
+    const deviationText = isNaN(moduleDeviation) ? '0' : moduleDeviation > 0 ? `+${moduleDeviation}` : `${moduleDeviation}`;
 
-    const percent = totalPlanned > 0 ? (totalRealized / totalPlanned) * 100 : 0;
+    return (
+        <div className="space-y-6 animate-fade-in pb-10">
 
-    return { totalPlanned, totalRealized, percent, linkedUnitsDetails };
-  };
-
-  return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      
-      {/* Header & Tabs */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between md:items-end gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Seguimiento Académico</h2>
-          <p className="text-gray-500">Monitoriza el avance de Unidades y Resultados de Aprendizaje.</p>
-        </div>
-        
-        <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button 
-                onClick={() => setActiveTab('units')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'units' ? 'bg-white text-chef-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            {/* Navigation & Header */}
+            <button
+                onClick={() => setSelectedCourseId(null)}
+                className="flex items-center gap-2 text-gray-500 hover:text-chef-600 font-bold text-sm transition-colors mb-2"
             >
-                <Layers size={16} /> Unidades (UT)
+                <ArrowLeft size={16} /> Volver a Módulos
             </button>
-            <button 
-                onClick={() => setActiveTab('ras')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${activeTab === 'ras' ? 'bg-white text-chef-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-                <GraduationCap size={16} /> Resultados (RA)
-            </button>
-        </div>
-      </div>
 
-      {/* --- TAB: UNITS VIEW --- */}
-      {activeTab === 'units' && (
-        <div className="space-y-8">
-            {courses.map((course) => (
-                <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="bg-chef-50 p-4 border-b border-chef-100 flex justify-between items-center">
-                    <div>
-                        <h3 className="font-bold text-lg text-chef-900">{course.name}</h3>
-                        <span className="text-xs text-chef-600 uppercase tracking-wide">{course.cycle}</span>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between lg:items-center gap-6">
+                <div>
+                    <h2 className="text-2xl font-black text-gray-900">{selectedCourse!.name}</h2>
+                    <p className="text-gray-500 font-medium">{selectedCourse!.cycle} • {selectedCourse!.grade}</p>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 md:items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <div className="text-right px-4 border-r border-gray-200 last:border-0">
+                        <p className="text-xs font-bold text-gray-400 uppercase">Horas Totales</p>
+                        <p className="text-xl font-black text-gray-800">{totalRealized} <span className="text-sm text-gray-400 font-normal">/ {totalPlanned > 0 ? totalPlanned : '-'} h</span></p>
                     </div>
-                    <div className="text-right hidden md:block">
-                        <span className="text-xs font-bold text-gray-400 uppercase block">Progreso Global</span>
-                        <span className="text-xl font-black text-chef-700">
-                             {Math.round((course.units.reduce((acc, u) => acc + u.hoursRealized, 0) / Math.max(1, course.annualHours)) * 100)}%
-                        </span>
+                    <div className="text-right px-4 border-r border-gray-200 last:border-0">
+                        <p className="text-xs font-bold text-gray-400 uppercase">Desviación</p>
+                        <p className={`text-xl font-black ${moduleDeviation > 0 ? 'text-red-500' : moduleDeviation < 0 ? 'text-green-500' : 'text-gray-500'}`}>
+                            {totalPlanned > 0 ? `${deviationText} h` : '-'}
+                        </p>
+                    </div>
+                    <div className="flex bg-white p-1 rounded-lg shadow-sm">
+                        <button
+                            onClick={() => setActiveTab('units')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-black uppercase transition-all ${activeTab === 'units' ? 'bg-chef-500 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            <Layers size={14} /> Unidades
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('ras')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-black uppercase transition-all ${activeTab === 'ras' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            <GraduationCap size={14} /> Resultados (RA)
+                        </button>
                     </div>
                 </div>
-                
-                <div className="divide-y divide-gray-100">
-                    {course.units.map((unit) => {
-                    const totalPlanned = unit.hoursPlannedTheory + unit.hoursPlannedPractice;
-                    const percent = Math.min(100, totalPlanned > 0 ? (unit.hoursRealized / totalPlanned) * 100 : 0);
-                    
-                    return (
-                    <div key={unit.id} className="p-4 hover:bg-gray-50 transition-colors group">
-                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-gray-800 text-lg">{unit.title.split(':')[0]}</span>
-                            <span className="text-gray-700 font-medium text-sm truncate">{unit.title.split(':')[1]}</span>
-                            <StatusBadge status={unit.status} />
-                            </div>
-                            <p className="text-xs text-gray-500 line-clamp-1">{unit.description}</p>
-                        </div>
+            </div>
 
-                        <div className="flex items-center gap-6 min-w-[200px]">
-                            <div className="flex-1">
-                            <div className="flex justify-between text-xs mb-1 font-semibold text-gray-600">
-                                <span>Realizado</span>
-                                <span>{unit.hoursRealized} / {totalPlanned} h</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div 
-                                className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                                    unit.hoursRealized >= totalPlanned ? 'bg-green-500' : 
-                                    unit.status === UnitStatus.DELAYED ? 'bg-red-400' : 'bg-chef-500'
-                                }`}
-                                style={{ width: `${percent}%` }}
-                                ></div>
-                            </div>
-                            </div>
+            {/* --- TAB: UNITS VIEW --- */}
+            {activeTab === 'units' && (
+                <div className="space-y-4">
+                    {selectedCourse!.units.length === 0 ? (
+                        <div className="p-12 text-center bg-white rounded-xl border border-dashed border-gray-300">
+                            <Layers className="mx-auto text-gray-300 mb-4" size={48} />
+                            <p className="text-gray-400 font-medium">No hay unidades didácticas configuradas.</p>
                         </div>
-                        </div>
-                        
-                        {unit.status === UnitStatus.DELAYED && (
-                        <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 p-2 rounded animate-pulse">
-                            <AlertCircle size={14} />
-                            <span className="font-bold">Retraso detectado:</span> {Math.max(0, totalPlanned - unit.hoursRealized)} horas pendientes.
-                        </div>
-                        )}
-                    </div>
-                    )})}
-                    {course.units.length === 0 && (
-                        <div className="p-8 text-center text-gray-400 italic">No hay unidades configuradas.</div>
+                    ) : (
+                        selectedCourse!.units.map((unit) => {
+                            const uPlanned = (unit.hoursPlannedTheory || 0) + (unit.hoursPlannedPractice || 0);
+                            const uDeviation = (unit.hoursRealized || 0) - uPlanned;
+                            const percent = uPlanned > 0 ? Math.min(100, ((unit.hoursRealized || 0) / uPlanned) * 100) : 0;
+
+                            // Parse Title gracefully
+                            const parts = unit.title.includes(':') ? unit.title.split(':') : [unit.title, ''];
+                            const prefix = parts[1] ? parts[0] : '';
+                            const mainTitle = parts[1] ? parts[1] : parts[0];
+
+                            return (
+                                <div key={unit.id} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                                {prefix && <span className="font-black text-gray-800 text-lg whitespace-nowrap mr-2">{prefix}</span>}
+                                                <StatusBadge status={unit.status} />
+                                            </div>
+                                            <p className="text-gray-700 font-bold text-sm">{mainTitle}</p>
+                                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{unit.description}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-6 min-w-[300px]">
+                                            <div className="flex-1">
+                                                <div className="flex justify-between text-xs mb-2 font-bold text-gray-500 uppercase">
+                                                    <span>Progreso</span>
+                                                    <div className="flex gap-2">
+                                                        <span>{unit.hoursRealized || 0} / {uPlanned > 0 ? uPlanned : '-'} h</span>
+                                                        {unit.status === UnitStatus.COMPLETED && uPlanned > 0 && (
+                                                            <span className={`${uDeviation > 0 ? 'text-red-500' : uDeviation < 0 ? 'text-green-500' : 'text-gray-300'}`}>
+                                                                ({uDeviation > 0 ? '+' : ''}{uDeviation}h)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-1000 ease-out ${unit.hoursRealized >= uPlanned ? 'bg-green-500' :
+                                                            unit.status === UnitStatus.DELAYED ? 'bg-red-500' : 'bg-chef-500'
+                                                            }`}
+                                                        style={{ width: `${percent}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {(unit.status === UnitStatus.DELAYED || uDeviation > 0) && (
+                                        <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-gray-50">
+                                            {unit.status === UnitStatus.DELAYED && (
+                                                <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 font-bold">
+                                                    <AlertCircle size={14} />
+                                                    <span>RETRASO: {Math.max(0, uPlanned - unit.hoursRealized)}h pendientes</span>
+                                                </div>
+                                            )}
+                                            {uDeviation > 0 && unit.status === UnitStatus.COMPLETED && (
+                                                <div className="flex items-center gap-2 text-xs text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 font-bold">
+                                                    <Clock size={14} />
+                                                    <span>EXCESO: {uDeviation}h extra</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })
                     )}
                 </div>
+            )}
+
+            {/* --- TAB: LEARNING RESULTS (RA) VIEW --- */}
+            {activeTab === 'ras' && (
+                <div className="space-y-6">
+                    {(!selectedCourse!.learningResults || selectedCourse!.learningResults.length === 0) ? (
+                        <div className="p-12 text-center bg-white rounded-xl border border-dashed border-gray-300">
+                            <GraduationCap className="mx-auto text-gray-300 mb-4" size={48} />
+                            <p className="text-gray-400 font-medium">No hay RAs definidos para este módulo.</p>
+                        </div>
+                    ) : (
+                        selectedCourse!.learningResults.map(ra => {
+                            const stats = getRaStats(ra, selectedCourse!.units);
+                            const isComplete = stats.percent >= 99.9; // Tolerance
+
+                            return (
+                                <div key={ra.id} className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                                    <div className="flex flex-col md:flex-row gap-8">
+
+                                        {/* RA Info */}
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${isComplete ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {ra.codigo}
+                                                </span>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                    Peso Total: {ra.ponderacion}%
+                                                </span>
+                                            </div>
+                                            <p className="font-bold text-gray-800 text-lg mb-4 leading-tight">{ra.descripcion}</p>
+
+                                            {/* Enhanced Criteria Breakdown */}
+                                            <div className="space-y-2">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Desglose por Criterios de Evaluación</p>
+                                                <div className="grid grid-cols-1 gap-2">
+                                                    {stats.criteriaDetails.map(crit => (
+                                                        <div key={crit.id} className="flex flex-col gap-2 text-xs bg-gray-50 p-2 rounded border border-gray-200">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-mono font-bold text-gray-600 bg-white px-1.5 rounded">{crit.codigo}</span>
+                                                                    <span className="text-gray-500 line-clamp-1 w-48" title={crit.descripcion}>{crit.descripcion}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="text-right">
+                                                                        <span className="block font-bold text-gray-700">{Math.round(crit.realProgressPercent)}% completado</span>
+                                                                        <span className="block text-[10px] text-gray-400">Pond: {crit.ponderacion}%</span>
+                                                                    </div>
+                                                                    <div className="w-16 text-right font-black text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                                                        +{crit.contribution.toFixed(1)}%
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Unit Breakdown */}
+                                                            <div className="flex flex-wrap gap-2 pl-8 border-t border-gray-200 pt-2 border-dashed">
+                                                                {(crit.linkedUnits as Unit[] || []).length > 0 ? (
+                                                                    (crit.linkedUnits as Unit[]).map((u) => (
+                                                                        <span key={u.id} className="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-500 flex items-center gap-1 shadow-sm">
+                                                                            <Layers size={10} className="text-gray-300" />
+                                                                            <span className="font-bold">{u.title.split(':')[0]}</span>:
+                                                                            <span className={u.hoursRealized > 0 ? 'text-green-600 font-black' : 'text-gray-400'}>{u.hoursRealized}h</span>
+                                                                        </span>
+                                                                    ))
+                                                                ) : (
+                                                                    <span className="text-[10px] text-gray-300 italic flex items-center gap-1"><AlertCircle size={10} /> Sin vinculación a UTs</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Total Progress */}
+                                        <div className="w-full md:w-1/3 flex flex-col justify-start bg-gray-50 p-6 rounded-xl border border-gray-200">
+                                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Progreso Ponderado RA</p>
+
+                                            <div className="relative flex items-center justify-center py-6">
+                                                <div className={`text-5xl font-black ${isComplete ? 'text-green-500' : 'text-blue-600'}`}>
+                                                    {stats.percent.toFixed(1)}%
+                                                </div>
+                                            </div>
+
+                                            <div className="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden border border-gray-300">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-1000 ${isComplete ? 'bg-green-500' : 'bg-blue-600'}`}
+                                                    style={{ width: `${Math.min(100, stats.percent)}%` }}
+                                                ></div>
+                                            </div>
+                                            <p className="text-[10px] text-center text-gray-400 mt-2">
+                                                Suma de contribuciones de criterios ponderados.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
-            ))}
+            )}
+
         </div>
-      )}
-
-      {/* --- TAB: LEARNING RESULTS (RA) VIEW --- */}
-      {activeTab === 'ras' && (
-          <div className="space-y-8">
-              {courses.map(course => (
-                  <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                      <div className="bg-white p-4 border-b border-gray-200 flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                                <GraduationCap size={20} />
-                           </div>
-                           <div>
-                                <h3 className="font-bold text-gray-800">{course.name}</h3>
-                                <p className="text-xs text-gray-500">Seguimiento de {course.learningResults?.length || 0} Resultados de Aprendizaje</p>
-                           </div>
-                      </div>
-
-                      <div className="divide-y divide-gray-100 bg-gray-50/50">
-                          {(!course.learningResults || course.learningResults.length === 0) ? (
-                              <div className="p-8 text-center text-gray-400">
-                                  No se han definido RAs para este módulo. Ve a Configuración para añadirlos.
-                              </div>
-                          ) : (
-                              course.learningResults.map(ra => {
-                                  const stats = getRaStats(ra, course.units);
-                                  const isComplete = stats.percent >= 100;
-
-                                  return (
-                                      <div key={ra.id} className="p-5 hover:bg-white transition-colors">
-                                          <div className="flex flex-col md:flex-row gap-6">
-                                              
-                                              {/* RA Info */}
-                                              <div className="flex-1">
-                                                  <div className="flex items-center gap-2 mb-2">
-                                                      <span className={`text-sm font-black px-2 py-0.5 rounded ${isComplete ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                          {ra.codigo}
-                                                      </span>
-                                                      <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                                                          Peso: {ra.ponderacion}%
-                                                      </span>
-                                                  </div>
-                                                  <p className="font-bold text-gray-800 mb-1">{ra.descripcion}</p>
-                                                  
-                                                  {/* Linked Criteria Count */}
-                                                  <div className="mt-3 flex flex-wrap gap-2">
-                                                      {ra.criterios.map(crit => (
-                                                          <span key={crit.id} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded border border-gray-200" title={crit.descripcion}>
-                                                              CE {crit.codigo}
-                                                          </span>
-                                                      ))}
-                                                  </div>
-                                              </div>
-
-                                              {/* Progress Stats */}
-                                              <div className="w-full md:w-1/3 flex flex-col justify-center">
-                                                  <div className="flex justify-between items-end mb-1">
-                                                      <span className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                                                          <Clock size={12}/> Progreso Imputado
-                                                      </span>
-                                                      <div className="text-right">
-                                                          <span className={`text-2xl font-black ${isComplete ? 'text-green-600' : 'text-blue-600'}`}>
-                                                              {Math.round(stats.percent)}%
-                                                          </span>
-                                                      </div>
-                                                  </div>
-                                                  
-                                                  {/* Progress Bar */}
-                                                  <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
-                                                      <div 
-                                                          className={`h-full rounded-full transition-all duration-1000 ${isComplete ? 'bg-green-500' : 'bg-blue-600'}`}
-                                                          style={{ width: `${Math.min(100, stats.percent)}%` }}
-                                                      ></div>
-                                                  </div>
-
-                                                  {/* Explanation / Breakdown */}
-                                                  <div className="bg-white border border-gray-100 rounded p-2 text-[10px] text-gray-500 space-y-1 shadow-sm">
-                                                      <div className="flex items-center gap-1 font-bold text-gray-700 mb-1">
-                                                          <LinkIcon size={10} />
-                                                          Unidades Vinculadas:
-                                                      </div>
-                                                      {stats.linkedUnitsDetails.length > 0 ? (
-                                                          <div className="flex flex-wrap gap-1">
-                                                              {stats.linkedUnitsDetails.map(u => (
-                                                                  <div 
-                                                                    key={u.id} 
-                                                                    className="px-1.5 py-0.5 bg-gray-100 rounded border border-gray-200 flex items-center gap-1"
-                                                                    title={`Progreso de ${u.title}: ${Math.round(u.percent)}%`}
-                                                                  >
-                                                                      <span>{u.title}</span>
-                                                                      <div className={`w-1.5 h-1.5 rounded-full ${u.percent >= 100 ? 'bg-green-500' : u.percent > 0 ? 'bg-blue-400' : 'bg-gray-300'}`}></div>
-                                                                  </div>
-                                                              ))}
-                                                          </div>
-                                                      ) : (
-                                                          <span className="italic text-red-400">Sin vinculación a UDs</span>
-                                                      )}
-                                                      <div className="mt-1 pt-1 border-t border-gray-100 flex justify-between">
-                                                           <span>H. Totales: {stats.totalPlanned}h</span>
-                                                           <span className="font-bold text-gray-800">Impartidas: {stats.totalRealized}h</span>
-                                                      </div>
-                                                  </div>
-                                              </div>
-                                          </div>
-                                      </div>
-                                  );
-                              })
-                          )}
-                      </div>
-                  </div>
-              ))}
-          </div>
-      )}
-
-    </div>
-  );
+    );
 };
 
 export default UnitsTracker;
