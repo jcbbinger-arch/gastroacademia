@@ -95,6 +95,57 @@ const App: React.FC = () => {
     if (data.exams) setExams(data.exams);
   };
 
+  // --- DATA SYNCHRONIZATION: Logs -> Course Units ---
+  useEffect(() => {
+    // We only want to run this if logs change (and potentially courses initially)
+    // to avoid infinite loops, we need to be careful.
+    // Strategy: Calculate expected state, if different from current course state, update.
+    
+    let hasChanges = false;
+    const newCourses = courses.map(course => {
+      let courseChanged = false;
+      const newUnits = course.units.map(unit => {
+        const unitLogs = logs.filter(l => l.courseId === course.id && l.unitId === unit.id);
+        const theoryHours = unitLogs.filter(l => l.type === 'Teórica').reduce((acc, l) => acc + l.hours, 0);
+        const practiceHours = unitLogs.filter(l => l.type === 'Práctica').reduce((acc, l) => acc + l.hours, 0);
+        const totalRealized = theoryHours + practiceHours;
+        
+        // Check Status
+        // Simple logic: Completed if realized >= planned
+        // Delayed if realized < planned (and maybe some date logic, but for now simple)
+        const totalPlanned = unit.hoursPlannedTheory + unit.hoursPlannedPractice;
+        let newStatus = unit.status;
+        
+        if (totalRealized >= totalPlanned && totalPlanned > 0) {
+            newStatus = 'Completado';
+        } else if (totalRealized > 0) {
+            newStatus = 'En Progreso';
+        } else {
+            newStatus = 'Pendiente';
+        }
+        
+        // Manual override or check if we need to update
+        if (unit.hoursRealized !== totalRealized || unit.status !== newStatus) {
+            courseChanged = true;
+            return { ...unit, hoursRealized: totalRealized, status: newStatus as any };
+        }
+        return unit;
+      });
+
+      if (courseChanged) {
+        hasChanges = true;
+        return { ...course, units: newUnits };
+      }
+      return course;
+    });
+
+    if (hasChanges) {
+        setCourses(newCourses);
+        // Note: setCourses will trigger the localStorage useEffect
+    }
+  }, [logs]); // Only trigger when logs change. Warning: logic depends on courses too but we don't want circular dependency. 
+  // Ideally, this runs when logs change, using the current state of courses.
+  
   const handleResetApp = () => {
     localStorage.clear();
     setCourses(COURSES_DATA);
@@ -113,7 +164,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} />;
+        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} onNavigate={setCurrentView} />;
       case 'calendar':
         return <CalendarView events={calendarEvents} logs={logs} exams={exams} schedule={schedule} courses={courses} schoolInfo={schoolInfo} onNavigateToJournal={handleNavigateToJournal} isLocked={isCalendarLocked} onToggleLock={setIsCalendarLocked} />;
       case 'journal':
@@ -133,7 +184,7 @@ const App: React.FC = () => {
       case 'ai':
         return <AIAssistant />;
       default:
-        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} />;
+        return <Dashboard courses={courses} evaluations={EVALUATIONS_DATA} logs={logs} exams={exams} onNavigate={setCurrentView} />;
     }
   };
 
